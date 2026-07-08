@@ -209,6 +209,11 @@ export default function LunchRadioApp() {
     // Google Places APIキー(任意)を控える。あれば高評価店の取得に使う。
     googleKeyRef.current = googleKeyInputRef.current?.value.trim() ?? '';
 
+    // 台本のLLM生成: OpenAI TTS用に入力されたキーを流用する。
+    // (未入力/ブラウザ音声時はテンプレート合成にフォールバック)
+    const openaiKey = ttsProvider === 'openai' ? (openaiKeyInputRef.current?.value.trim() ?? '') : '';
+    scriptGeneratorRef.current.configureLLM(openaiKey);
+
     setStartBusy(true);
 
     const locationManager = locationManagerRef.current;

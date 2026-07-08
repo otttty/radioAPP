@@ -1,5 +1,6 @@
 // 台本生成の単体確認用スクリプト(Node上でDOM無しに実行可能)
 // 実行: npm test (= node test/sample-script.mjs)
+// 注: LLMキーは未設定なので、ここではテンプレート・フォールボック経路を確認する。
 import { ScriptGenerator } from '../lib/scriptGenerator.js';
 
 const facts = {
@@ -18,7 +19,7 @@ const facts = {
 const gen = new ScriptGenerator({ rng: (() => { let s = 42; return () => (s = (s * 9301 + 49297) % 233280) / 233280; })() });
 
 for (let i = 0; i < 7; i++) {
-  const seg = gen.nextSegment(facts);
+  const seg = await gen.nextSegment(facts);
   console.log(`\n--- [${i + 1}] topic=${seg.topic} factGrounded=${seg.factGrounded} ---`);
   for (const line of seg.lines) {
     const name = line.speaker === 'main' ? 'ひかり' : 'そら';
