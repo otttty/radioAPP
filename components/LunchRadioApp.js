@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { LocationManager } from '@/lib/locationManager';
 import { getCurrentWeather } from '@/lib/weatherProvider';
 import { getNearbyPlaces } from '@/lib/placesProvider';
+import { getRatedPlaces } from '@/lib/googlePlacesProvider';
 import { getNearbyTrivia } from '@/lib/triviaProvider';
 import { geocodePlaceName } from '@/lib/geocodeFallback';
 import { reverseGeocodeArea } from '@/lib/reverseGeocode';
@@ -61,6 +62,7 @@ export default function LunchRadioApp() {
 
   const manualInputRef = useRef(null);
   const openaiKeyInputRef = useRef(null);
+  const googleKeyInputRef = useRef(null);
   const transcriptRef = useRef(null);
 
   const locationManagerRef = useRef(null);
@@ -68,6 +70,7 @@ export default function LunchRadioApp() {
   const audioPipelineRef = useRef(null);
   const currentFixRef = useRef(null);
   const areaNameRef = useRef(null); // 逆ジオコーディング等で得た地名(番組冒頭で言及)
+  const googleKeyRef = useRef(''); // Google Places APIキー(あれば高評価店を使う)
   const prefsRef = useRef(DEFAULT_PREFS);
   const lineKeyRef = useRef(0);
 
@@ -96,12 +99,27 @@ export default function LunchRadioApp() {
 
     const [weather, places, trivia] = await Promise.all([
       p.weather ? getCurrentWeather(fix.lat, fix.lon) : Promise.resolve(null),
-      needPlaces ? getNearbyPlaces(fix.lat, fix.lon) : Promise.resolve([]),
+      needPlaces ? fetchPlaces(fix.lat, fix.lon) : Promise.resolve([]),
       p.trivia ? getNearbyTrivia(fix.lat, fix.lon) : Promise.resolve([]),
     ]);
 
     const filteredPlaces = places.filter((pl) => p[pl.category]);
     return { weather, places: filteredPlaces, trivia, location: fix };
+  }
+
+  // お店の取得: Google Placesキーがあれば高評価店を優先し、失敗/空なら
+  // キー不要のOSM(Overpass)へフォールバックする。
+  async function fetchPlaces(lat, lon) {
+    const key = googleKeyRef.current;
+    if (key) {
+      try {
+        const rated = await getRatedPlaces(lat, lon, key);
+        if (rated.length > 0) return rated;
+      } catch (e) {
+        console.warn('[places] Google Places failed, falling back to OSM:', e);
+      }
+    }
+    return getNearbyPlaces(lat, lon);
   }
 
   // 位置が実在座標なら市区町村名を解決して番組冒頭で言及できるようにする。
@@ -187,6 +205,9 @@ export default function LunchRadioApp() {
 
   async function handleStart() {
     if (!setupTtsEngine()) return;
+
+    // Google Places APIキー(任意)を控える。あれば高評価店の取得に使う。
+    googleKeyRef.current = googleKeyInputRef.current?.value.trim() ?? '';
 
     setStartBusy(true);
 
@@ -293,6 +314,15 @@ export default function LunchRadioApp() {
             <input type="password" ref={openaiKeyInputRef} placeholder="sk-... (OpenAI APIキー。保存はされません)" />
           </div>
           <div id="ttsStatus" className="hint">{ttsStatus}</div>
+        </div>
+
+        <div className="tts-select">
+          <label>🍽️ お店の評価(任意・Google Places APIキー)</label>
+          <input type="password" ref={googleKeyInputRef} placeholder="AIza... (未入力なら評価なしのOSMを使用)" />
+          <div className="hint">
+            入力すると、Googleの高評価店を評価順に紹介します。キーはこのブラウザ内だけで使い、
+            サーバー経由でGoogleへ渡すだけで保存はしません(位置情報がGoogleへ送られます)。
+          </div>
         </div>
 
         <button className="primary" onClick={handleStart} disabled={startBusy}>
