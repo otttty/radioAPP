@@ -17,7 +17,7 @@ export async function POST(request) {
     return new Response('invalid JSON body', { status: 400 });
   }
 
-  const { apiKey, model, voice, input, instructions } = body ?? {};
+  const { apiKey, model, voice, input, instructions, speed } = body ?? {};
   if (!apiKey || typeof apiKey !== 'string') {
     return new Response('apiKey is required', { status: 400 });
   }
@@ -38,6 +38,7 @@ export async function POST(request) {
         voice: voice || 'shimmer',
         input,
         instructions,
+        speed: typeof speed === 'number' ? speed : undefined,
         response_format: 'mp3',
       }),
     });
