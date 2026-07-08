@@ -6,6 +6,7 @@ import { getCurrentWeather } from '@/lib/weatherProvider';
 import { getNearbyPlaces } from '@/lib/placesProvider';
 import { getNearbyTrivia } from '@/lib/triviaProvider';
 import { geocodePlaceName } from '@/lib/geocodeFallback';
+import { reverseGeocodeArea } from '@/lib/reverseGeocode';
 import { ScriptGenerator } from '@/lib/scriptGenerator';
 import { BrowserTTSEngine } from '@/lib/ttsEngine';
 import { OpenAITTSEngine } from '@/lib/openaiTtsEngine';
@@ -66,6 +67,7 @@ export default function LunchRadioApp() {
   const scriptGeneratorRef = useRef(null);
   const audioPipelineRef = useRef(null);
   const currentFixRef = useRef(null);
+  const areaNameRef = useRef(null); // 逆ジオコーディング等で得た地名(番組冒頭で言及)
   const prefsRef = useRef(DEFAULT_PREFS);
   const lineKeyRef = useRef(0);
 
@@ -83,7 +85,9 @@ export default function LunchRadioApp() {
   // lite:true の場合はネットワーク呼び出しを一切せず、位置情報だけを即座に返す
   // (オープニング生成用。体感待ち時間の短縮が目的)。
   async function buildFacts({ lite = false } = {}) {
-    const fix = currentFixRef.current ?? FALLBACK_FIX;
+    const baseFix = currentFixRef.current ?? FALLBACK_FIX;
+    // 地名は逆ジオコーディング等で別途解決したものを location に添える(冒頭の土地紹介用)
+    const fix = { ...baseFix, areaName: areaNameRef.current };
     if (lite) {
       return { weather: null, places: [], trivia: [], location: fix };
     }
@@ -98,6 +102,19 @@ export default function LunchRadioApp() {
 
     const filteredPlaces = places.filter((pl) => p[pl.category]);
     return { weather, places: filteredPlaces, trivia, location: fix };
+  }
+
+  // 位置が実在座標なら市区町村名を解決して番組冒頭で言及できるようにする。
+  // 取れなくても番組は汎用的な言い回しで続行する(必須ではない)。
+  async function ensureAreaName(fix) {
+    if (areaNameRef.current) return;
+    if (!fix || fix.status === 'denied' || fix.status === 'unavailable') return;
+    try {
+      const name = await reverseGeocodeArea(fix.lat, fix.lon);
+      if (name) areaNameRef.current = name;
+    } catch {
+      /* 失敗は無視 */
+    }
   }
 
   useEffect(() => {
@@ -139,6 +156,7 @@ export default function LunchRadioApp() {
       const fix = await geocodePlaceName(q);
       if (fix) {
         currentFixRef.current = fix;
+        areaNameRef.current = q; // 手入力した地名をそのまま冒頭紹介に使う
         setLocStatus(`「${q}」周辺として進行します(概算位置)`);
         setLocLabel(`${fix.lat.toFixed(3)}, ${fix.lon.toFixed(3)}(手入力・概算)`);
       } else {
@@ -183,6 +201,8 @@ export default function LunchRadioApp() {
         currentFixRef.current = fix;
         setLocStatus('現在地の周辺情報を使って番組を進行します。');
         setLocLabel(`${fix.lat.toFixed(3)}, ${fix.lon.toFixed(3)}(約100m格子に丸め済み)`);
+        // 冒頭で土地に触れるため、番組を始める前に地名を解決しておく(最大3秒)
+        await ensureAreaName(fix);
         // 移動検知: 意味のある移動があった時だけ fix を更新(無駄な再取得はしない)
         locationManager.watch((newFix) => {
           currentFixRef.current = newFix;
@@ -224,8 +244,8 @@ export default function LunchRadioApp() {
 
   return (
     <div className="app">
-      <h1>📻 お昼のラジオ</h1>
-      <p className="tagline">今いる場所のまわりの情報を、2人のパーソナリティがゆるく話し続けます。</p>
+      <h1>📻 まちかどラジオ</h1>
+      <p className="tagline">今いる場所のまわりの情報を、2人のパーソナリティがテンポよく話し続けます。</p>
 
       <div id="panel-setup" className={`card${started ? ' hidden' : ''}`}>
         <div className="perm-row">
