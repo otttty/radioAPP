@@ -38,7 +38,7 @@ export async function POST(request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: model || 'gpt-4o-mini',
+        model: model || 'gpt-4.1-mini',
         messages,
         temperature: typeof temperature === 'number' ? temperature : 0.9,
         response_format: { type: 'json_object' },
