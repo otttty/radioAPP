@@ -20,7 +20,9 @@ export async function POST(request) {
   }
 
   const { apiKey, model, messages, temperature } = body ?? {};
-  if (!apiKey || typeof apiKey !== 'string') {
+  // クライアントがキーを送ってくればそれを、無ければサーバーの既定キーを使う
+  const key = (typeof apiKey === 'string' && apiKey.trim()) || process.env.OPENAI_API_KEY;
+  if (!key) {
     return Response.json({ error: 'apiKey is required' }, { status: 400 });
   }
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -32,7 +34,7 @@ export async function POST(request) {
     upstream = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

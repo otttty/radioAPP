@@ -18,7 +18,9 @@ export async function POST(request) {
   }
 
   const { apiKey, model, voice, input, instructions, speed } = body ?? {};
-  if (!apiKey || typeof apiKey !== 'string') {
+  // クライアントがキーを送ってくればそれを、無ければサーバーの既定キーを使う
+  const key = (typeof apiKey === 'string' && apiKey.trim()) || process.env.OPENAI_API_KEY;
+  if (!key) {
     return new Response('apiKey is required', { status: 400 });
   }
   if (!input || typeof input !== 'string') {
@@ -30,7 +32,7 @@ export async function POST(request) {
     upstream = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

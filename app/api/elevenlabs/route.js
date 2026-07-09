@@ -22,7 +22,9 @@ export async function POST(request) {
   }
 
   const { apiKey, voiceId, modelId, text, voiceSettings } = body ?? {};
-  if (!apiKey || typeof apiKey !== 'string') {
+  // クライアントがキーを送ってくればそれを、無ければサーバーの既定キーを使う
+  const key = (typeof apiKey === 'string' && apiKey.trim()) || process.env.ELEVENLABS_API_KEY;
+  if (!key) {
     return new Response('apiKey is required', { status: 400 });
   }
   if (!voiceId || typeof voiceId !== 'string') {
@@ -41,7 +43,7 @@ export async function POST(request) {
     upstream = await fetch(url, {
       method: 'POST',
       headers: {
-        'xi-api-key': apiKey,
+        'xi-api-key': key,
         'Content-Type': 'application/json',
         Accept: 'audio/mpeg',
       },

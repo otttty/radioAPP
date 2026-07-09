@@ -47,7 +47,9 @@ export async function POST(request) {
   }
 
   const { apiKey, lat, lon, radius } = body ?? {};
-  if (!apiKey || typeof apiKey !== 'string') {
+  // クライアントがキーを送ってくればそれを、無ければサーバーの既定キーを使う
+  const key = (typeof apiKey === 'string' && apiKey.trim()) || process.env.GOOGLE_PLACES_API_KEY;
+  if (!key) {
     return Response.json({ error: 'apiKey is required' }, { status: 400 });
   }
   if (typeof lat !== 'number' || typeof lon !== 'number') {
@@ -60,7 +62,7 @@ export async function POST(request) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Goog-Api-Key': apiKey,
+        'X-Goog-Api-Key': key,
         'X-Goog-FieldMask': FIELD_MASK,
       },
       body: JSON.stringify({
