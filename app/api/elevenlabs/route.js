@@ -11,7 +11,9 @@
 
 export const runtime = 'nodejs';
 
-const DEFAULT_MODEL = 'eleven_turbo_v2_5'; // 日本語対応・低レイテンシで連続再生向き
+// 日本語の読み精度は turbo/flash より multilingual_v2 の方が高い。
+// 連続再生のレイテンシはプリフェッチで吸収できるため、精度優先で multilingual_v2 を既定にする。
+const DEFAULT_MODEL = 'eleven_multilingual_v2';
 
 export async function POST(request) {
   let body;
@@ -51,11 +53,13 @@ export async function POST(request) {
         text,
         model_id: modelId || DEFAULT_MODEL,
         voice_settings: voiceSettings || {
-          stability: 0.4,
-          similarity_boost: 0.85,
-          style: 0.35,
+          stability: 0.45,
+          similarity_boost: 0.8,
+          // styleは高いほど表情豊かだが語尾が不安定になりやすいので控えめに。
+          style: 0.3,
           use_speaker_boost: true,
-          speed: 1.05,
+          // speedを上げると語尾が詰まって不自然になりやすいため等速にする。
+          speed: 1.0,
         },
       }),
     });
