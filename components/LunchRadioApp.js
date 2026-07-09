@@ -11,6 +11,7 @@ import { reverseGeocodeArea } from '@/lib/reverseGeocode';
 import { ScriptGenerator } from '@/lib/scriptGenerator';
 import { BrowserTTSEngine } from '@/lib/ttsEngine';
 import { OpenAITTSEngine } from '@/lib/openaiTtsEngine';
+import { ElevenLabsTTSEngine } from '@/lib/elevenLabsTtsEngine';
 import { AudioPipeline } from '@/lib/audioPipeline';
 
 // ============================================================
@@ -47,7 +48,7 @@ const DEFAULT_PREFS = { weather: true, lunch: true, cafe: true, culture: true, t
 export default function LunchRadioApp() {
   const [permState, setPermState] = useState('未確認');
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
-  const [ttsProvider, setTtsProvider] = useState('openai');
+  const [ttsProvider, setTtsProvider] = useState('elevenlabs');
   const [ttsStatus, setTtsStatus] = useState('');
   const [locStatus, setLocStatus] = useState('');
   const [manualBusy, setManualBusy] = useState(false);
@@ -62,6 +63,10 @@ export default function LunchRadioApp() {
 
   const manualInputRef = useRef(null);
   const openaiKeyInputRef = useRef(null);
+  const elevenKeyInputRef = useRef(null);
+  const elevenMainVoiceRef = useRef(null);
+  const elevenSubVoiceRef = useRef(null);
+  const scriptKeyInputRef = useRef(null); // 台本生成用OpenAIキー(音声プロバイダから独立)
   const googleKeyInputRef = useRef(null);
   const transcriptRef = useRef(null);
 
@@ -188,7 +193,19 @@ export default function LunchRadioApp() {
   /** 選択されたTTSプロバイダに応じてエンジンを組み立てる。未入力ならfalseを返す */
   function setupTtsEngine() {
     const pipeline = audioPipelineRef.current;
-    if (ttsProvider === 'openai') {
+    if (ttsProvider === 'elevenlabs') {
+      const key = elevenKeyInputRef.current?.value.trim();
+      if (!key) {
+        setTtsStatus('ElevenLabsのAPIキーを入力してください(このブラウザ内だけで使い、保存はしません)。');
+        return false;
+      }
+      pipeline.ttsEngine = new ElevenLabsTTSEngine({
+        apiKey: key,
+        mainVoiceId: elevenMainVoiceRef.current?.value.trim() || undefined,
+        subVoiceId: elevenSubVoiceRef.current?.value.trim() || undefined,
+      });
+      setTtsStatus('ElevenLabsで読み上げます(音声生成のたびにAPI利用料がかかります)。');
+    } else if (ttsProvider === 'openai') {
       const key = openaiKeyInputRef.current?.value.trim();
       if (!key) {
         setTtsStatus('OpenAIのAPIキーを入力してください(このブラウザ内だけで使い、保存はしません)。');
@@ -209,10 +226,12 @@ export default function LunchRadioApp() {
     // Google Places APIキー(任意)を控える。あれば高評価店の取得に使う。
     googleKeyRef.current = googleKeyInputRef.current?.value.trim() ?? '';
 
-    // 台本のLLM生成: OpenAI TTS用に入力されたキーを流用する。
-    // (未入力/ブラウザ音声時はテンプレート合成にフォールバック)
-    const openaiKey = ttsProvider === 'openai' ? (openaiKeyInputRef.current?.value.trim() ?? '') : '';
-    scriptGeneratorRef.current.configureLLM(openaiKey);
+    // 台本のLLM生成: 専用のOpenAIキーを使う。未入力でも音声にOpenAI TTSを
+    // 選んでいればそのキーを流用する。どちらも無ければテンプレート合成になる。
+    const scriptKey =
+      (scriptKeyInputRef.current?.value.trim() || '') ||
+      (ttsProvider === 'openai' ? (openaiKeyInputRef.current?.value.trim() || '') : '');
+    scriptGeneratorRef.current.configureLLM(scriptKey);
 
     setStartBusy(true);
 
@@ -312,13 +331,28 @@ export default function LunchRadioApp() {
         <div className="tts-select">
           <label>🎙️ 読み上げ音声</label>
           <select value={ttsProvider} onChange={(e) => setTtsProvider(e.target.value)}>
-            <option value="browser">ブラウザ内蔵(キー不要・機械音寄り)</option>
+            <option value="elevenlabs">ElevenLabs(自然な声・要APIキー・従量課金)</option>
             <option value="openai">OpenAI TTS(自然な声・要APIキー・従量課金)</option>
+            <option value="browser">ブラウザ内蔵(キー不要・機械音寄り)</option>
           </select>
-          <div id="openaiKeyRow" className={ttsProvider !== 'openai' ? 'hidden' : ''}>
+          <div className={ttsProvider !== 'elevenlabs' ? 'hidden' : ''}>
+            <input type="password" ref={elevenKeyInputRef} placeholder="ElevenLabs APIキー(保存はされません)" />
+            <input type="text" ref={elevenMainVoiceRef} placeholder="メインの声のVoice ID(任意・空欄で既定)" />
+            <input type="text" ref={elevenSubVoiceRef} placeholder="アシスタントの声のVoice ID(任意・空欄で既定)" />
+          </div>
+          <div className={ttsProvider !== 'openai' ? 'hidden' : ''}>
             <input type="password" ref={openaiKeyInputRef} placeholder="sk-... (OpenAI APIキー。保存はされません)" />
           </div>
           <div id="ttsStatus" className="hint">{ttsStatus}</div>
+        </div>
+
+        <div className="tts-select">
+          <label>🧠 台本生成AI(任意・OpenAI APIキー)</label>
+          <input type="password" ref={scriptKeyInputRef} placeholder="sk-... (未入力ならテンプレートで進行)" />
+          <div className="hint">
+            入力すると、台本を毎回LLMが自然な会話で生成します(音声のOpenAI TTSを選んだ場合は
+            そのキーを自動流用)。キーはこのブラウザ内だけで使い、保存はしません。
+          </div>
         </div>
 
         <div className="tts-select">

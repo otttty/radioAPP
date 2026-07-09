@@ -9,11 +9,14 @@
 
 - 天気=Open-Meteo、スポット=OpenStreetMap(Overpass)、豆知識=Wikipedia は
   すべてAPIキー不要・無料。
-- 音声は2種類から選択可能:
-  - ブラウザ内蔵(Web Speech API) — キー不要・無料だが機械的な音質
-  - OpenAI TTS(gpt-4o-mini-tts) — 自然な音質。要OpenAI APIキー、従量課金。
-    キーは画面で都度入力し、サーバー側の `/api/tts` (Next.jsのRoute Handler)を
-    経由してOpenAIへ転送するだけで、保存・ログ出力はしません。
+- 音声は3種類から選択可能(既定はElevenLabs):
+  - ElevenLabs(eleven_turbo_v2_5) — 自然な音質。要ElevenLabs APIキー、従量課金。
+    メイン/アシスタントに別々のVoice IDを割り当て(UIで上書き可)。キーは画面で都度入力し、
+    サーバー側の `/api/elevenlabs` 経由でElevenLabsへ転送するだけで保存・ログ出力はしません。
+  - OpenAI TTS(gpt-4o-mini-tts) — 自然な音質。要OpenAI APIキー、従量課金。`/api/tts` 経由。
+  - ブラウザ内蔵(Web Speech API) — キー不要・無料だが機械的な音質。
+  ※台本生成用のOpenAIキーは音声プロバイダから独立した任意欄で入力します(音声=ElevenLabs、
+    台本=OpenAI のように別々に使えます。音声にOpenAI TTSを選んだ場合はそのキーを自動流用)。
 - お店の紹介は2段階:
   - 既定 = OpenStreetMap(評価なし・キー不要)
   - Google Places APIキーを入力すると、高評価店を評価順に紹介(星・クチコミ数を言及)。
