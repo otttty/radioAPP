@@ -53,10 +53,11 @@ export async function POST(request) {
         text,
         model_id: modelId || DEFAULT_MODEL,
         voice_settings: voiceSettings || {
-          stability: 0.45,
+          // stabilityが低いと発話が揺らぎ、不規則な間や途切れ感の原因になるため高めに。
+          stability: 0.55,
           similarity_boost: 0.8,
           // styleは高いほど表情豊かだが語尾が不安定になりやすいので控えめに。
-          style: 0.3,
+          style: 0.25,
           use_speaker_boost: true,
           // speedを上げると語尾が詰まって不自然になりやすいため等速にする。
           speed: 1.0,
@@ -72,8 +73,25 @@ export async function POST(request) {
     return new Response(detail || 'ElevenLabs request failed', { status: upstream.status || 502 });
   }
 
-  return new Response(upstream.body, {
+  // ストリームを素通しせず、全量をバッファしてから返す。
+  // 途中でアップストリームが切れた場合、素通しだと「途切れたMP3」が正常応答として
+  // クライアントに渡り、単語の途中で音が止まる原因になる。全量バッファなら
+  // 転送失敗はエラー(502)になり、クライアント側で行スキップとして安全に処理される。
+  let audio;
+  try {
+    audio = await upstream.arrayBuffer();
+  } catch {
+    return new Response('ElevenLabs stream aborted', { status: 502 });
+  }
+  if (!audio || audio.byteLength === 0) {
+    return new Response('ElevenLabs returned empty audio', { status: 502 });
+  }
+
+  return new Response(audio, {
     status: 200,
-    headers: { 'Content-Type': 'audio/mpeg' },
+    headers: {
+      'Content-Type': 'audio/mpeg',
+      'Content-Length': String(audio.byteLength),
+    },
   });
 }
