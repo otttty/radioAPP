@@ -12,6 +12,8 @@
 export const runtime = 'nodejs';
 
 const ENDPOINT = 'https://places.googleapis.com/v1/places:searchNearby';
+// reviews / editorialSummary は上位SKU(課金が高め)だが、
+// 台本で「利用者の声・お店の雰囲気」を語らせるために取得する。
 const FIELD_MASK = [
   'places.displayName',
   'places.rating',
@@ -19,7 +21,18 @@ const FIELD_MASK = [
   'places.location',
   'places.types',
   'places.primaryTypeDisplayName',
+  'places.editorialSummary',
+  'places.reviews',
 ].join(',');
+
+// レビュー本文を短く整える(1件あたり最大160字、最大3件)
+function pickReviews(reviews) {
+  return (reviews || [])
+    .map((r) => (r?.text?.text || '').replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .slice(0, 3)
+    .map((t) => (t.length > 160 ? `${t.slice(0, 160)}…` : t));
+}
 
 // Google Placesのタイプ → このアプリのカテゴリ
 function categorize(types) {
@@ -101,6 +114,8 @@ export async function POST(request) {
       cuisine: p.primaryTypeDisplayName?.text,
       rating: typeof p.rating === 'number' ? p.rating : undefined,
       userRatingCount: typeof p.userRatingCount === 'number' ? p.userRatingCount : undefined,
+      summary: p.editorialSummary?.text || undefined,
+      reviews: pickReviews(p.reviews),
       source: 'Google Maps',
     }))
     .filter((p) => p.name && p.distanceM != null);

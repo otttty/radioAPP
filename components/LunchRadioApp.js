@@ -427,7 +427,7 @@ export default function LunchRadioApp() {
         <div id="transcript" ref={transcriptRef}>
           {transcript.map((line) => (
             <div key={line.key} className={`line ${line.speaker}`}>
-              {line.speaker === 'main' ? 'ひかり' : 'そら'}: {line.text}
+              {line.speaker === 'main' ? 'ボブ' : 'ジェシー'}: {line.text}
             </div>
           ))}
         </div>
