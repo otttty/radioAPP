@@ -88,12 +88,30 @@ git remote add origin git@github.com:<your-account>/<your-repo>.git
 git push -u origin main
 ```
 
+## 環境変数
+
+サーバー側だけで使う設定。ローカルは `.env.local`(gitignore済み)、本番は Vercel の
+Environment Variables に同名で登録する。すべて任意だが、既定連携やアクセス制限を使う場合は設定する。
+
+| 変数名 | 用途 |
+|---|---|
+| `ELEVENLABS_API_KEY` | ElevenLabs音声の既定キー(未設定ならUIで都度入力) |
+| `OPENAI_API_KEY` | 台本LLM・OpenAI TTSの既定キー(同上) |
+| `GOOGLE_PLACES_API_KEY` | 高評価店取得の既定キー(未設定ならOSMにフォールバック) |
+| `SITE_PASSWORD` | アクセス制限(Basic認証)の合言葉。未設定ならゲート無効 |
+
+## アクセス制限(パスワードゲート)
+
+`middleware.js` がサイト全体(ページ + `/api/*`)に Basic 認証をかける。`SITE_PASSWORD` を
+設定すると、合言葉を知っている人だけがアクセスできる(既定APIキーの悪用=課金対策)。
+ユーザー名は任意(空でも可)、パスワードのみ照合する。`SITE_PASSWORD` 未設定時はゲート無効。
+
 ## Vercelでの公開
 
-1. https://vercel.com で「Add New... > Project」から、上記でPushしたGitHubリポジトリを選択。
-2. Framework Preset は自動で `Next.js` が検出されます。ビルドコマンド・出力先はデフォルトのままでOKです。
-3. 環境変数の設定は不要です(OpenAIのAPIキーはユーザーがブラウザ側で都度入力する方式のため、
-   Vercel側にシークレットを登録する必要はありません)。
-4. Deployを押すと数分で `https://<project>.vercel.app` が発行されます。
+1. https://vercel.com で「Add New... > Project」から、PushしたGitHubリポジトリを選択。
+2. Framework Preset は自動で `Next.js` が検出されます。ビルド設定はデフォルトのままでOK。
+3. Settings > Environment Variables で上記の変数を登録(Production/Preview/Development すべてに)。
+   既定キーで動かす場合は3つのAPIキーを、アクセス制限をかける場合は `SITE_PASSWORD` も登録。
+4. 変数を追加/変更したら Deployments から Redeploy して反映する。
 
-Geolocation・マイク等のブラウザAPIはVercelの発行するhttps URLで問題なく動作します。
+Geolocation等のブラウザAPIはVercelの発行するhttps URLで問題なく動作します。
