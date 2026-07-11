@@ -48,7 +48,9 @@ const DEFAULT_PREFS = { weather: true, lunch: true, cafe: true, culture: true, t
 export default function LunchRadioApp() {
   const [permState, setPermState] = useState('未確認');
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
-  const [ttsProvider, setTtsProvider] = useState('elevenlabs');
+  // ElevenLabsの無料枠が尽きているため、当面はOpenAI TTSを既定にする
+  // (枠回復後はドロップダウンでElevenLabsに切り替え可能)
+  const [ttsProvider, setTtsProvider] = useState('openai');
   const [ttsStatus, setTtsStatus] = useState('');
   const [locStatus, setLocStatus] = useState('');
   const [manualBusy, setManualBusy] = useState(false);
@@ -352,8 +354,8 @@ export default function LunchRadioApp() {
         <div className="tts-select">
           <label>🎙️ 読み上げ音声</label>
           <select value={ttsProvider} onChange={(e) => setTtsProvider(e.target.value)}>
-            <option value="elevenlabs">ElevenLabs(自然な声・要APIキー・従量課金)</option>
             <option value="openai">OpenAI TTS(自然な声・要APIキー・従量課金)</option>
+            <option value="elevenlabs">ElevenLabs(自然な声・要APIキー・従量課金)</option>
             <option value="browser">ブラウザ内蔵(キー不要・機械音寄り)</option>
           </select>
           <div className={ttsProvider !== 'elevenlabs' ? 'hidden' : ''}>
