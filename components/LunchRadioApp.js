@@ -311,7 +311,7 @@ export default function LunchRadioApp() {
   return (
     <div className="app">
       <h1>📻 まちかどラジオ</h1>
-      <p className="tagline">今いる場所のまわりの情報を、2人のパーソナリティがテンポよく話し続けます。</p>
+      <p className="tagline">今いる場所のまわりの情報を、リスナーからのお便りと一緒にDJボブが届け続けます。</p>
 
       <div id="panel-setup" className={`card${started ? ' hidden' : ''}`}>
         <div className="perm-row">
@@ -362,8 +362,8 @@ export default function LunchRadioApp() {
               ref={elevenKeyInputRef}
               placeholder={serverDefaults.elevenlabs ? 'ElevenLabs APIキー(連携済み・空欄でOK)' : 'ElevenLabs APIキー(保存はされません)'}
             />
-            <input type="text" ref={elevenMainVoiceRef} placeholder="メインの声のVoice ID(任意・空欄で既定)" />
-            <input type="text" ref={elevenSubVoiceRef} placeholder="アシスタントの声のVoice ID(任意・空欄で既定)" />
+            <input type="text" ref={elevenMainVoiceRef} placeholder="パーソナリティの声のVoice ID(任意・空欄で既定)" />
+            <input type="text" ref={elevenSubVoiceRef} placeholder="お便り朗読の声のVoice ID(任意・空欄で既定)" />
           </div>
           <div className={ttsProvider !== 'openai' ? 'hidden' : ''}>
             <input
@@ -427,7 +427,7 @@ export default function LunchRadioApp() {
         <div id="transcript" ref={transcriptRef}>
           {transcript.map((line) => (
             <div key={line.key} className={`line ${line.speaker}`}>
-              {line.speaker === 'main' ? 'ボブ' : 'ジェシー'}: {line.text}
+              {line.speaker === 'main' ? 'ボブ' : '📩 お便り'}: {line.text}
             </div>
           ))}
         </div>

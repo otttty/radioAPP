@@ -22,7 +22,7 @@ for (let i = 0; i < 7; i++) {
   const seg = await gen.nextSegment(facts);
   console.log(`\n--- [${i + 1}] topic=${seg.topic} factGrounded=${seg.factGrounded} ---`);
   for (const line of seg.lines) {
-    const name = line.speaker === 'main' ? 'ひかり' : 'そら';
+    const name = line.speaker === 'main' ? 'ボブ' : '📩お便り';
     console.log(`${name}: ${line.text}`);
   }
 }
