@@ -378,8 +378,15 @@ export default function LunchRadioApp() {
 
       <div id="panel-player" className={`card${started ? '' : ' hidden'}`}>
         <div className="now-playing">
+          <div className={`onair${isPlaying ? ' live' : ''}`}>
+            <span className="dot" />
+            ON AIR
+          </div>
           <div id="topicLabel">{topicLabel}</div>
           <div id="factBadge">{factBadge}</div>
+          <div className={`equalizer${isPlaying ? ' live' : ''}`}>
+            <span /><span /><span /><span /><span /><span /><span />
+          </div>
         </div>
         <div className="controls">
           <button className="secondary" onClick={handlePlayPause}>
@@ -401,7 +408,7 @@ export default function LunchRadioApp() {
       </div>
 
       <footer className="note">
-        天気: Open-Meteo / スポット: OpenStreetMap(Overpass) / 豆知識: Wikipedia / 音声: ブラウザ内蔵TTSまたはOpenAI TTS。
+        スポット: Google Places / 地名: BigDataCloud / 音声: OpenAI TTS(またはElevenLabs・ブラウザ内蔵)。
       </footer>
     </div>
   );
