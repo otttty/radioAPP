@@ -77,6 +77,7 @@ export default function LunchRadioApp() {
   const scriptGeneratorRef = useRef(null);
   const audioPipelineRef = useRef(null);
   const currentFixRef = useRef(null);
+  const locationReadyRef = useRef(false); // 位置情報が確定したか(未確定の間はフリートークでつなぐ)
   const areaNameRef = useRef(null); // 逆ジオコーディング等で得た地名(番組冒頭で言及)
   const googleKeyRef = useRef(''); // Google Places APIキー(あれば高評価店を使う)
   const serverDefaultsRef = useRef({ elevenlabs: false, openai: false, google: false });
@@ -117,8 +118,10 @@ export default function LunchRadioApp() {
     const baseFix = currentFixRef.current ?? FALLBACK_FIX;
     // 地名は逆ジオコーディング等で別途解決したものを location に添える(冒頭の土地紹介用)
     const fix = { ...baseFix, areaName: areaNameRef.current };
-    if (lite) {
-      return { weather: null, places: [], trivia: [], location: fix };
+    // 位置情報がまだ確定していない(取得中)なら、周辺データは取りにいかず warmup を返す。
+    // 台本側はこの間、ボブのフリートークでつなぐ。
+    if (lite || !locationReadyRef.current) {
+      return { weather: null, places: [], trivia: [], location: fix, warmup: !locationReadyRef.current };
     }
     const p = prefsRef.current;
     const needPlaces = p.lunch || p.cafe || p.culture;
@@ -202,6 +205,7 @@ export default function LunchRadioApp() {
       if (fix) {
         currentFixRef.current = fix;
         areaNameRef.current = q; // 手入力した地名をそのまま冒頭紹介に使う
+        locationReadyRef.current = true; // 位置確定
         setLocStatus(`「${q}」周辺として進行します(概算位置)`);
         setLocLabel(`${fix.lat.toFixed(3)}, ${fix.lon.toFixed(3)}(手入力・概算)`);
       } else {
@@ -256,33 +260,41 @@ export default function LunchRadioApp() {
       (ttsProvider === 'openai' ? (openaiKeyInputRef.current?.value.trim() || '') : '');
     scriptGeneratorRef.current.configureLLM(scriptKey, { serverDefault: serverDefaultsRef.current.openai });
 
-    setStartBusy(true);
+    // 位置取得を待たずに番組(ボブのフリートーク)を先に始める。
+    // 位置が確定するまでは buildFacts が warmup を返し、台本はフリートークでつなぐ。
+    setStarted(true);
+    audioPipelineRef.current.start().then(() => setIsPlaying(true));
+
+    // 位置情報の取得はバックグラウンドで進める(取れ次第、周辺トピックへ移行)
+    acquireLocationInBackground();
+  }
+
+  // 位置情報をバックグラウンドで取得し、確定したら locationReadyRef を立てる。
+  async function acquireLocationInBackground() {
+    // 手入力(この場所で)で既に確定済みなら何もしない
+    if (locationReadyRef.current) return;
 
     const locationManager = locationManagerRef.current;
-    if (!currentFixRef.current) {
-      const fix = await locationManager.requestOnce();
-      setPermState(PERM_LABEL[locationManager.permissionState] ?? locationManager.permissionState);
-      if (fix.status === 'denied' || fix.status === 'unavailable') {
-        setLocStatus('位置情報が使えなかったため、地名を手入力するか、一般的な話題中心で進行します。');
-        currentFixRef.current = FALLBACK_FIX;
-      } else {
-        currentFixRef.current = fix;
-        setLocStatus('現在地の周辺情報を使って番組を進行します。');
-        setLocLabel(`${fix.lat.toFixed(3)}, ${fix.lon.toFixed(3)}(約100m格子に丸め済み)`);
-        // 冒頭で土地に触れるため、番組を始める前に地名を解決しておく(最大3秒)
-        await ensureAreaName(fix);
-        // 移動検知: 意味のある移動があった時だけ fix を更新(無駄な再取得はしない)
-        locationManager.watch((newFix) => {
-          currentFixRef.current = newFix;
-          setLocLabel(`${newFix.lat.toFixed(3)}, ${newFix.lon.toFixed(3)}(移動を検知し更新)`);
-        });
-      }
-    }
+    const fix = await locationManager.requestOnce();
+    setPermState(PERM_LABEL[locationManager.permissionState] ?? locationManager.permissionState);
 
-    setStarted(true);
-    await audioPipelineRef.current.start();
-    setIsPlaying(true);
-    setStartBusy(false);
+    if (fix.status === 'denied' || fix.status === 'unavailable') {
+      setLocStatus('位置情報が使えなかったため、地名を手入力するか、一般的な話題中心で進行します。');
+      currentFixRef.current = FALLBACK_FIX;
+    } else {
+      currentFixRef.current = fix;
+      setLocStatus('現在地の周辺情報を使って番組を進行します。');
+      setLocLabel(`${fix.lat.toFixed(3)}, ${fix.lon.toFixed(3)}(約100m格子に丸め済み)`);
+      // 冒頭で土地に触れるため地名を解決(最大3秒)
+      await ensureAreaName(fix);
+      // 移動検知: 意味のある移動があった時だけ fix を更新
+      locationManager.watch((newFix) => {
+        currentFixRef.current = newFix;
+        setLocLabel(`${newFix.lat.toFixed(3)}, ${newFix.lon.toFixed(3)}(移動を検知し更新)`);
+      });
+    }
+    // ここで周辺トピックへ移行してよい(拒否時も FALLBACK_FIX で進行)
+    locationReadyRef.current = true;
   }
 
   function handlePlayPause() {
