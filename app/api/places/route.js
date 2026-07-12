@@ -34,12 +34,32 @@ function pickReviews(reviews) {
     .map((t) => (t.length > 160 ? `${t.slice(0, 160)}…` : t));
 }
 
-// Google Placesのタイプ → このアプリのカテゴリ
+// 飲食店に限らず、公園・建物・名所などレビューが付くスポットを幅広く対象にする。
+const INCLUDED_TYPES = [
+  // 食
+  'restaurant', 'cafe', 'bakery', 'bar', 'meal_takeaway',
+  // 公園・自然
+  'park', 'national_park', 'garden',
+  // 文化・名所・建物
+  'museum', 'art_gallery', 'tourist_attraction', 'historical_landmark', 'monument',
+  'place_of_worship', 'church', 'hindu_temple', 'mosque', 'synagogue',
+  'library', 'zoo', 'aquarium', 'amusement_park', 'stadium',
+  // 商業施設・その他の建物
+  'shopping_mall', 'book_store', 'department_store',
+];
+
+// Google Placesのタイプ → このアプリの表示カテゴリ
 function categorize(types) {
   const t = types || [];
-  if (t.includes('cafe') || t.includes('coffee_shop')) return 'cafe';
-  if (t.includes('museum') || t.includes('art_gallery') || t.includes('tourist_attraction')) return 'culture';
-  return 'lunch'; // restaurant / food 系はランチ扱い
+  const has = (...xs) => xs.some((x) => t.includes(x));
+  if (has('park', 'national_park', 'garden')) return 'park';
+  if (has('cafe', 'coffee_shop')) return 'cafe';
+  if (has('museum', 'art_gallery', 'tourist_attraction', 'historical_landmark', 'monument',
+    'place_of_worship', 'church', 'hindu_temple', 'mosque', 'synagogue', 'library',
+    'zoo', 'aquarium', 'amusement_park', 'stadium')) return 'culture';
+  if (has('restaurant', 'bakery', 'bar', 'meal_takeaway', 'food')) return 'lunch';
+  if (has('shopping_mall', 'book_store', 'department_store')) return 'shop';
+  return 'spot';
 }
 
 function distanceMeters(lat1, lon1, lat2, lon2) {
@@ -79,7 +99,7 @@ export async function POST(request) {
         'X-Goog-FieldMask': FIELD_MASK,
       },
       body: JSON.stringify({
-        includedTypes: ['restaurant', 'cafe', 'museum', 'art_gallery'],
+        includedTypes: INCLUDED_TYPES,
         maxResultCount: 20,
         rankPreference: 'POPULARITY',
         languageCode: 'ja',

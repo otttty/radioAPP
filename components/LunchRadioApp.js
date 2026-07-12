@@ -2,10 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { LocationManager } from '@/lib/locationManager';
-import { getCurrentWeather } from '@/lib/weatherProvider';
-import { getNearbyPlaces } from '@/lib/placesProvider';
 import { getRatedPlaces } from '@/lib/googlePlacesProvider';
-import { getNearbyTrivia } from '@/lib/triviaProvider';
 import { geocodePlaceName } from '@/lib/geocodeFallback';
 import { reverseGeocodeArea } from '@/lib/reverseGeocode';
 import { ScriptGenerator } from '@/lib/scriptGenerator';
@@ -25,11 +22,12 @@ import { AudioPipeline } from '@/lib/audioPipeline';
 
 const TOPIC_LABEL = {
   opening: '📻 オープニング',
-  weather: '☀️ お天気',
-  lunch: '🍚 ランチ',
+  lunch: '🍚 グルメ',
   cafe: '☕ カフェ',
-  culture: '🖼️ 文化スポット',
-  trivia: '💡 豆知識',
+  park: '🌳 公園・自然',
+  culture: '🖼️ 文化施設・名所',
+  shop: '🛍️ お店',
+  spot: '📍 スポット',
   filler: '🎙️ フリートーク',
 };
 
@@ -43,11 +41,8 @@ const PERM_LABEL = {
 
 const FALLBACK_FIX = { lat: 35.681, lon: 139.767, accuracy: Infinity, timestamp: Date.now(), status: 'unavailable' };
 
-const DEFAULT_PREFS = { weather: true, lunch: true, cafe: true, culture: true, trivia: true };
-
 export default function LunchRadioApp() {
   const [permState, setPermState] = useState('未確認');
-  const [prefs, setPrefs] = useState(DEFAULT_PREFS);
   // ElevenLabsの無料枠が尽きているため、当面はOpenAI TTSを既定にする
   // (枠回復後はドロップダウンでElevenLabsに切り替え可能)
   const [ttsProvider, setTtsProvider] = useState('openai');
@@ -81,12 +76,7 @@ export default function LunchRadioApp() {
   const areaNameRef = useRef(null); // 逆ジオコーディング等で得た地名(番組冒頭で言及)
   const googleKeyRef = useRef(''); // Google Places APIキー(あれば高評価店を使う)
   const serverDefaultsRef = useRef({ elevenlabs: false, openai: false, google: false });
-  const prefsRef = useRef(DEFAULT_PREFS);
   const lineKeyRef = useRef(0);
-
-  useEffect(() => {
-    prefsRef.current = prefs;
-  }, [prefs]);
 
   useEffect(() => {
     if (transcriptRef.current) {
@@ -111,45 +101,30 @@ export default function LunchRadioApp() {
       .catch(() => {});
   }, []);
 
-  // 周辺情報を並列取得し、ジャンル設定でフィルタしたFactBundleを返す。
-  // lite:true の場合はネットワーク呼び出しを一切せず、位置情報だけを即座に返す
-  // (オープニング生成用。体感待ち時間の短縮が目的)。
+  // トピックの素材(Google Placesのスポット)を返すFactBundle。
+  // lite:true、または位置情報が未確定(取得中)の場合はネットワーク呼び出しをせず
+  // warmup を返す(台本側はその間ボブのフリートークでつなぐ)。
   async function buildFacts({ lite = false } = {}) {
     const baseFix = currentFixRef.current ?? FALLBACK_FIX;
     // 地名は逆ジオコーディング等で別途解決したものを location に添える(冒頭の土地紹介用)
     const fix = { ...baseFix, areaName: areaNameRef.current };
-    // 位置情報がまだ確定していない(取得中)なら、周辺データは取りにいかず warmup を返す。
-    // 台本側はこの間、ボブのフリートークでつなぐ。
     if (lite || !locationReadyRef.current) {
-      return { weather: null, places: [], trivia: [], location: fix, warmup: !locationReadyRef.current };
+      return { places: [], location: fix, warmup: !locationReadyRef.current };
     }
-    const p = prefsRef.current;
-    const needPlaces = p.lunch || p.cafe || p.culture;
-
-    const [weather, places, trivia] = await Promise.all([
-      p.weather ? getCurrentWeather(fix.lat, fix.lon) : Promise.resolve(null),
-      needPlaces ? fetchPlaces(fix.lat, fix.lon) : Promise.resolve([]),
-      p.trivia ? getNearbyTrivia(fix.lat, fix.lon) : Promise.resolve([]),
-    ]);
-
-    const filteredPlaces = places.filter((pl) => p[pl.category]);
-    return { weather, places: filteredPlaces, trivia, location: fix };
+    const places = await fetchPlaces(fix.lat, fix.lon);
+    return { places, location: fix };
   }
 
-  // お店の取得: Google Placesキーがあれば高評価店を優先し、失敗/空なら
-  // キー不要のOSM(Overpass)へフォールバックする。
+  // トピックはGoogle Placesのスポット(レビュー付き)のみ。取得失敗/空なら空配列。
   async function fetchPlaces(lat, lon) {
     const key = googleKeyRef.current;
-    // ユーザーキーがある、またはサーバー側に既定キーがある場合はGoogleを試す
-    if (key || serverDefaultsRef.current.google) {
-      try {
-        const rated = await getRatedPlaces(lat, lon, key); // 空keyならサーバー既定キー
-        if (rated.length > 0) return rated;
-      } catch (e) {
-        console.warn('[places] Google Places failed, falling back to OSM:', e);
-      }
+    if (!key && !serverDefaultsRef.current.google) return [];
+    try {
+      return await getRatedPlaces(lat, lon, key); // 空keyならサーバー既定キー
+    } catch (e) {
+      console.warn('[places] Google Places failed:', e);
+      return [];
     }
-    return getNearbyPlaces(lat, lon);
   }
 
   // 位置が実在座標なら市区町村名を解決して番組冒頭で言及できるようにする。
@@ -318,14 +293,10 @@ export default function LunchRadioApp() {
     audioPipelineRef.current?.setVolume(v);
   }
 
-  function togglePref(key) {
-    setPrefs((prev) => ({ ...prev, [key]: !prev[key] }));
-  }
-
   return (
     <div className="app">
       <h1>📻 まちかどラジオ</h1>
-      <p className="tagline">今いる場所のまわりの情報を、リスナーからのお便りと一緒にDJボブが届け続けます。</p>
+      <p className="tagline">今いる場所のまわりのお店や名所を、そこを訪れたリスナーのお便りと一緒にDJボブが届け続けます。</p>
 
       <div id="panel-setup" className={`card${started ? ' hidden' : ''}`}>
         <div className="perm-row">
@@ -334,26 +305,8 @@ export default function LunchRadioApp() {
         </div>
         <div className="perm-purpose">
           「開始」を押すと位置情報の利用許可を確認します。取得した位置は
-          <strong>周辺のランチ・カフェ・文化施設・天気・豆知識を探す目的だけ</strong>
+          <strong>周辺のお店・公園・名所などのスポットを探す目的だけ</strong>
           に使い、約100mの粒度に丸めてから利用します(正確な座標を必要以上に外部へ送りません)。拒否した場合は一般的な話題中心で進行します。
-        </div>
-
-        <div className="prefs">
-          <label>
-            <input type="checkbox" checked={prefs.weather} onChange={() => togglePref('weather')} /> ☀️ 天気
-          </label>
-          <label>
-            <input type="checkbox" checked={prefs.lunch} onChange={() => togglePref('lunch')} /> 🍚 ランチ
-          </label>
-          <label>
-            <input type="checkbox" checked={prefs.cafe} onChange={() => togglePref('cafe')} /> ☕ カフェ
-          </label>
-          <label>
-            <input type="checkbox" checked={prefs.culture} onChange={() => togglePref('culture')} /> 🖼️ 文化施設
-          </label>
-          <label>
-            <input type="checkbox" checked={prefs.trivia} onChange={() => togglePref('trivia')} /> 💡 豆知識
-          </label>
         </div>
 
         <div className="manual-locate">
