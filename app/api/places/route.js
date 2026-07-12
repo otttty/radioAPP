@@ -73,6 +73,36 @@ function distanceMeters(lat1, lon1, lat2, lon2) {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
+// Google Places への外向きリクエスト。タイムアウト(AbortController)付きで、
+// 一時的なネットワーク失敗は1回だけリトライする。Vercelのサーバーレス関数では
+// 稀に外向きfetchがハング/瞬断するため、ここで粘って安定させる。
+async function fetchGooglePlaces(key, requestBody, { timeoutMs = 9000, retries = 1 } = {}) {
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': key,
+          'X-Goog-FieldMask': FIELD_MASK,
+        },
+        body: requestBody,
+        signal: controller.signal,
+      });
+    } catch (e) {
+      lastErr = e;
+      // タイムアウト(abort)や瞬断は1回だけ間を置いて再試行する
+      if (attempt < retries) await new Promise((r) => setTimeout(r, 400));
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw lastErr;
+}
+
 export async function POST(request) {
   let body;
   try {
@@ -91,30 +121,36 @@ export async function POST(request) {
     return Response.json({ error: 'lat/lon are required' }, { status: 400 });
   }
 
+  const requestBody = JSON.stringify({
+    includedTypes: INCLUDED_TYPES,
+    maxResultCount: 20,
+    rankPreference: 'POPULARITY',
+    languageCode: 'ja',
+    locationRestriction: {
+      circle: {
+        center: { latitude: lat, longitude: lon },
+        radius: Math.min(Math.max(Number(radius) || 800, 100), 2000),
+      },
+    },
+  });
+
   let upstream;
   try {
-    upstream = await fetch(ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': key,
-        'X-Goog-FieldMask': FIELD_MASK,
-      },
-      body: JSON.stringify({
-        includedTypes: INCLUDED_TYPES,
-        maxResultCount: 20,
-        rankPreference: 'POPULARITY',
-        languageCode: 'ja',
-        locationRestriction: {
-          circle: {
-            center: { latitude: lat, longitude: lon },
-            radius: Math.min(Math.max(Number(radius) || 800, 100), 2000),
-          },
-        },
-      }),
-    });
-  } catch {
-    return Response.json({ error: 'failed to reach Google Places' }, { status: 502 });
+    upstream = await fetchGooglePlaces(key, requestBody);
+  } catch (e) {
+    // 外向きfetchが例外(タイムアウト/DNS/TLS等)。真因が分かるよう実際の
+    // エラーメッセージを返す(握りつぶさない)。サーバーログにも残す。
+    const reason = e?.name === 'AbortError' ? 'timeout (>9s)' : String(e?.message || e);
+    console.error('[api/places] upstream fetch failed:', reason);
+    return Response.json({ error: `failed to reach Google Places: ${reason}` }, { status: 502 });
+  }
+
+  if (!upstream.ok) {
+    const detail = await upstream.text().catch(() => '');
+    return Response.json(
+      { error: detail?.slice(0, 300) || 'Google Places request failed' },
+      { status: upstream.status || 502 }
+    );
   }
 
   if (!upstream.ok) {
