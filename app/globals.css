@@ -53,6 +53,62 @@ h1 {
   line-height: 1.6;
 }
 
+/* ---- ボブのラジオブース(番組バナー) ---- */
+.booth {
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  background: #151009;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.03) inset,
+    0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.booth svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.booth-caption {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 14px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--sub);
+  border-top: 1px dashed var(--border);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* 音波: 停止中はうっすら、再生中は波紋のように流れる */
+.booth .wave { opacity: 0.12; }
+.booth.live .wave { animation: wave-pulse 1.6s ease-out infinite; }
+.booth.live .wave:nth-of-type(2) { animation-delay: 0.25s; }
+.booth.live .wave:nth-of-type(3) { animation-delay: 0.5s; }
+@keyframes wave-pulse {
+  0% { opacity: 0; }
+  30% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+
+/* 音符: 再生中だけふわっと浮かぶ */
+.booth .note { opacity: 0; }
+.booth.live .note { animation: note-float 2.6s ease-in-out infinite; }
+.booth.live .note + .note { animation-delay: 1.3s; }
+@keyframes note-float {
+  0% { opacity: 0; transform: translateY(8px); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-16px); }
+}
+
+/* ブース内のON AIRランプ: 再生中に点滅 */
+.booth .booth-onair-dot { opacity: 0.35; }
+.booth.live .booth-onair-dot {
+  opacity: 1;
+  animation: onair-pulse 1.4s ease-in-out infinite;
+}
+
 /* ---- カード: 暗いパネル ---- */
 .card {
   background: linear-gradient(180deg, var(--card-2), var(--card));

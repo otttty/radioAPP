@@ -10,6 +10,7 @@ import { BrowserTTSEngine } from '@/lib/ttsEngine';
 import { OpenAITTSEngine } from '@/lib/openaiTtsEngine';
 import { ElevenLabsTTSEngine } from '@/lib/elevenLabsTtsEngine';
 import { AudioPipeline } from '@/lib/audioPipeline';
+import BobBooth from './BobBooth';
 
 // ============================================================
 // LunchRadioApp
@@ -297,6 +298,8 @@ export default function LunchRadioApp() {
     <div className="app">
       <h1>📻 まちかどラジオ</h1>
       <p className="tagline">今いる場所のまわりのお店や名所を、そこを訪れたリスナーのお便りと一緒にDJボブが届け続けます。</p>
+
+      <BobBooth live={isPlaying} />
 
       <div id="panel-setup" className={`card${started ? ' hidden' : ''}`}>
         <div className="perm-row">
