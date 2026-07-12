@@ -65,8 +65,6 @@ export default function LunchRadioApp() {
   const elevenKeyInputRef = useRef(null);
   const elevenMainVoiceRef = useRef(null);
   const elevenSubVoiceRef = useRef(null);
-  const scriptKeyInputRef = useRef(null); // 台本生成用OpenAIキー(音声プロバイダから独立)
-  const googleKeyInputRef = useRef(null);
   const transcriptRef = useRef(null);
 
   const locationManagerRef = useRef(null);
@@ -75,7 +73,6 @@ export default function LunchRadioApp() {
   const currentFixRef = useRef(null);
   const locationReadyRef = useRef(false); // 位置情報が確定したか(未確定の間はフリートークでつなぐ)
   const areaNameRef = useRef(null); // 逆ジオコーディング等で得た地名(番組冒頭で言及)
-  const googleKeyRef = useRef(''); // Google Places APIキー(あれば高評価店を使う)
   const serverDefaultsRef = useRef({ elevenlabs: false, openai: false, google: false });
   const lineKeyRef = useRef(0);
 
@@ -117,11 +114,11 @@ export default function LunchRadioApp() {
   }
 
   // トピックはGoogle Placesのスポット(レビュー付き)のみ。取得失敗/空なら空配列。
+  // キーは常にサーバー側の既定キー(連携済み)を使う。
   async function fetchPlaces(lat, lon) {
-    const key = googleKeyRef.current;
-    if (!key && !serverDefaultsRef.current.google) return [];
+    if (!serverDefaultsRef.current.google) return [];
     try {
-      return await getRatedPlaces(lat, lon, key); // 空keyならサーバー既定キー
+      return await getRatedPlaces(lat, lon, ''); // 空keyならサーバー既定キー
     } catch (e) {
       console.warn('[places] Google Places failed:', e);
       return [];
@@ -226,14 +223,9 @@ export default function LunchRadioApp() {
   async function handleStart() {
     if (!setupTtsEngine()) return;
 
-    // Google Places APIキー(任意)を控える。あれば高評価店の取得に使う。
-    googleKeyRef.current = googleKeyInputRef.current?.value.trim() ?? '';
-
-    // 台本のLLM生成: 専用のOpenAIキーを使う。未入力でも音声にOpenAI TTSを
-    // 選んでいればそのキーを流用。ユーザーキーが無くてもサーバー既定キーがあれば有効。
-    const scriptKey =
-      (scriptKeyInputRef.current?.value.trim() || '') ||
-      (ttsProvider === 'openai' ? (openaiKeyInputRef.current?.value.trim() || '') : '');
+    // 台本のLLM生成: サーバーの既定キー(連携済み)を使う。音声用にユーザーが
+    // OpenAIキーを入れていた場合だけ、それを流用する。
+    const scriptKey = ttsProvider === 'openai' ? (openaiKeyInputRef.current?.value.trim() || '') : '';
     scriptGeneratorRef.current.configureLLM(scriptKey, { serverDefault: serverDefaultsRef.current.openai });
 
     // 位置取得を待たずに番組(ボブのフリートーク)を先に始める。
@@ -343,34 +335,6 @@ export default function LunchRadioApp() {
             />
           </div>
           <div id="ttsStatus" className="hint">{ttsStatus}</div>
-        </div>
-
-        <div className="tts-select">
-          <label>🧠 台本生成AI(OpenAI)</label>
-          <input
-            type="password"
-            ref={scriptKeyInputRef}
-            placeholder={serverDefaults.openai ? 'OpenAI APIキー(連携済み・空欄でOK)' : 'sk-... (未入力ならテンプレートで進行)'}
-          />
-          <div className="hint">
-            {serverDefaults.openai
-              ? '台本は毎回LLMが自然な会話で生成します(連携済みのキーを使用)。'
-              : '入力すると、台本を毎回LLMが自然な会話で生成します。キーはこのブラウザ内だけで使い、保存はしません。'}
-          </div>
-        </div>
-
-        <div className="tts-select">
-          <label>🍽️ お店の評価(Google Places)</label>
-          <input
-            type="password"
-            ref={googleKeyInputRef}
-            placeholder={serverDefaults.google ? 'Google Places APIキー(連携済み・空欄でOK)' : 'AIza... (未入力なら評価なしのOSMを使用)'}
-          />
-          <div className="hint">
-            {serverDefaults.google
-              ? 'Googleの高評価店を評価順に紹介します(連携済みのキーを使用。位置情報がGoogleへ送られます)。'
-              : '入力すると、Googleの高評価店を評価順に紹介します。位置情報がGoogleへ送られます。'}
-          </div>
         </div>
 
         <button className="primary" onClick={handleStart} disabled={startBusy}>
