@@ -2,9 +2,10 @@
 // BobBooth
 // ------------------------------------------------------------
 // DJボブがラジオブースでマイクに向かって喋っているシーンのSVGイラスト。
-// ボブ像: サングラスをかけたアメリカ人DJ風。マイクに向かって少し斜めに
-// 構えた3/4アングル(体ごと軽くリーン)で、ひげ+短髪フェード+ワイド
-// フレームのシェード。ネオンブルーの深夜スタジオ。
+// ボブ像: サングラス+ベースボールキャップのアメリカ人DJ風。マイクに
+// 向かって少し斜めに構えた3/4アングル(体ごと軽くリーン)。ひげなし。
+// ヘッドホンはキャップの上からバンドを回し、カップは耳(顔の側面)に
+// きちんと重なる描画順(奥カップ→顔→キャップ→手前カップ)にしている。
 // live=true(再生中)のとき、ON AIRランプ・音波・音符・波形が動く。
 // 外部画像を使わずインラインSVGで完結(ライセンス・ホスティング不要)。
 // ============================================================
@@ -15,7 +16,7 @@ export default function BobBooth({ live }) {
       <svg
         viewBox="0 0 480 190"
         role="img"
-        aria-label="サングラスをかけたDJボブが、深夜のラジオブースでマイクに向かって斜めに構えて話しているイラスト"
+        aria-label="サングラスとキャップをかぶったDJボブが、深夜のラジオブースでマイクに向かって話しているイラスト"
       >
         <defs>
           {/* 吸音材の壁パターン */}
@@ -36,6 +37,10 @@ export default function BobBooth({ live }) {
           <linearGradient id="jacketG" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#26334f" />
             <stop offset="100%" stopColor="#131a2c" />
+          </linearGradient>
+          <linearGradient id="capG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#24365c" />
+            <stop offset="100%" stopColor="#16233f" />
           </linearGradient>
           <linearGradient id="micG" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stopColor="#38445f" />
@@ -125,50 +130,56 @@ export default function BobBooth({ live }) {
           <rect x="300" y="102" width="16" height="16" fill="#c99672" />
           <ellipse cx="308" cy="106" rx="10" ry="4" fill="#8a5f3e" opacity="0.5" />
 
+          {/* 奥側(左)のイヤーカップ: 顔の後ろに配置 */}
+          <ellipse cx="285" cy="92" rx="8" ry="13" fill="#141b2c" stroke="#39465f" strokeWidth="2" />
+          <ellipse cx="285" cy="92" rx="5" ry="10" fill="#0a0e18" />
+
           {/* 顔(マイク側へ向いた3/4・顎は左寄り) */}
           <path d="M288 78 Q290 54 314 54 Q340 56 340 82 Q340 100 330 110 Q320 117 308 116 Q296 114 290 104 Q287 92 288 78 Z" fill="url(#skinG)" />
           {/* ネオンのリムライト(右頬) */}
           <path d="M337 74 Q341 88 332 102" fill="none" stroke="#2fd0ff" strokeWidth="2" opacity="0.35" strokeLinecap="round" />
-
-          {/* 髪(短髪フェード+ラインナップ) */}
-          <path d="M286 74 Q288 50 314 50 Q342 52 340 78 Q336 62 326 60 Q312 54 300 62 Q290 66 286 74 Z" fill="#171009" />
-          <path d="M296 58 Q310 52 326 58" fill="none" stroke="#332619" strokeWidth="2" opacity="0.8" strokeLinecap="round" />
-          <rect x="334" y="78" width="4" height="12" rx="2" fill="#171009" />
-
-          {/* サングラス(ワイドフレームのシェード・3/4で奥のレンズは細く) */}
-          <rect x="288" y="73.5" width="36" height="3" rx="1.5" fill="#10141d" />
-          <rect x="289" y="75" width="12" height="13" rx="3" fill="#0a0d13" stroke="#232a3a" strokeWidth="1.5" />
-          <rect x="305" y="75" width="18" height="14" rx="4" fill="#0a0d13" stroke="#232a3a" strokeWidth="1.5" />
-          <line x1="301" y1="80" x2="305" y2="80" stroke="#232a3a" strokeWidth="2" />
-          <line x1="323" y1="80" x2="336" y2="77" stroke="#232a3a" strokeWidth="2" />
-          <line x1="309" y1="77" x2="316" y2="86" stroke="#2fd0ff" strokeWidth="1.5" opacity="0.3" />
-          <line x1="292" y1="77" x2="297" y2="84" stroke="#2fd0ff" strokeWidth="1.2" opacity="0.25" />
+          {/* もみあげ(キャップからのぞく) */}
+          <rect x="334" y="76" width="4" height="12" rx="2" fill="#171009" />
+          <rect x="289" y="75" width="3" height="9" rx="1.5" fill="#171009" />
 
           {/* 鼻(3/4でマイク側へ) */}
           <path d="M302 86 Q297 93 299 97 Q302 100 306 97" fill="none" stroke="#a2704e" strokeWidth="2" strokeLinecap="round" />
 
-          {/* ひげ(あごひげ+口ひげ+ジョーラインの剃り残し) */}
-          <path d="M290 100 Q293 112 306 116 Q322 117 333 104" fill="none" stroke="#241a12" strokeWidth="5" opacity="0.25" strokeLinecap="round" />
-          <path d="M295 101 Q303 97 313 101" fill="none" stroke="#241a12" strokeWidth="3" opacity="0.85" strokeLinecap="round" />
+          {/* 口(リアル寄り: 軽く開いて喋る・ひげなし) */}
+          <path d="M294 103 Q304 101 315 104" fill="none" stroke="#8a5a42" strokeWidth="1.5" strokeLinecap="round" />
+          <path d="M294 104 Q304 102 315 105 Q311 111 302 111 Q296 109 294 104 Z" fill="#4a221d" />
+          <path d="M297 104.5 Q304 103 312 105 L311.5 107 Q304 105.5 298 106.5 Z" fill="#e9e2d8" opacity="0.95" />
+          <path d="M298 111 Q304 113 310 111" fill="none" stroke="#c98d6b" strokeWidth="2" opacity="0.8" strokeLinecap="round" />
+          <path d="M299 114 Q304 115.5 309 114" fill="none" stroke="#8a5f3e" strokeWidth="1.5" opacity="0.4" strokeLinecap="round" />
 
-          {/* 口(マイクに向かって喋る・自信ありげなグリン) */}
-          <path d="M293 104 Q304 101 316 104 Q312 114 302 114 Q295 110 293 104 Z" fill="#5d2a24" />
-          <path d="M296 104 Q304 102 313 104 L312 107 Q304 105 297 107 Z" fill="#f4efe8" />
-          <ellipse cx="304" cy="111" rx="4.5" ry="2.2" fill="#a04a42" />
-          <path d="M299 114 Q304 116 309 114 Q308 118 304 118.5 Q300 118 299 114 Z" fill="#241a12" opacity="0.8" />
+          {/* ベースボールキャップ(つばはマイク側へ) */}
+          <path d="M284 74 Q284 46 314 46 Q342 48 342 74 Q314 66 284 74 Z" fill="url(#capG)" />
+          <path d="M314 46 Q305 58 298 72" fill="none" stroke="#101c33" strokeWidth="1.5" />
+          <path d="M314 46 Q320 58 326 72" fill="none" stroke="#101c33" strokeWidth="1.5" />
+          <circle cx="314" cy="46" r="2.5" fill="#101c33" />
+          <circle cx="298" cy="62" r="3" fill="none" stroke="#2fd0ff" strokeWidth="1.5" opacity="0.8" />
+          <path d="M286 72 Q268 68 256 73 Q253 77 259 79 Q274 80 288 78 Z" fill="#12203a" stroke="#0d1830" strokeWidth="1" />
+          <path d="M259 78 Q272 79 286 77" fill="none" stroke="#0a1426" strokeWidth="1.5" />
 
-          {/* ヘッドホン(パッド付きバンド+メタルヨーク+イヤーカップ) */}
-          <path d="M280 76 A34 34 0 0 1 344 76" fill="none" stroke="#222c42" strokeWidth="8" strokeLinecap="round" />
-          <path d="M280 76 A34 34 0 0 1 344 76" fill="none" stroke="#46536e" strokeWidth="2.5" strokeLinecap="round" />
-          <line x1="280" y1="76" x2="277" y2="88" stroke="#39465f" strokeWidth="3" />
-          <line x1="344" y1="76" x2="347" y2="88" stroke="#39465f" strokeWidth="3" />
-          <ellipse cx="276" cy="92" rx="8" ry="13" fill="#141b2c" stroke="#39465f" strokeWidth="2" />
-          <ellipse cx="276" cy="92" rx="5" ry="10" fill="#0a0e18" />
-          <circle cx="276" cy="102" r="1.5" fill="#2fd0ff" filter="url(#glow)" />
-          <ellipse cx="348" cy="92" rx="8" ry="13" fill="#141b2c" stroke="#39465f" strokeWidth="2" />
-          <ellipse cx="348" cy="92" rx="5" ry="10" fill="#0a0e18" />
-          <circle cx="348" cy="102" r="1.5" fill="#2fd0ff" filter="url(#glow)" />
-          <path d="M276 104 Q268 132 262 152" fill="none" stroke="#0c1120" strokeWidth="2" />
+          {/* サングラス(ワイドフレーム・3/4で奥のレンズは細く) */}
+          <rect x="288" y="76" width="36" height="3" rx="1.5" fill="#10141d" />
+          <rect x="289" y="77.5" width="12" height="13" rx="3" fill="#0a0d13" stroke="#232a3a" strokeWidth="1.5" />
+          <rect x="305" y="77.5" width="18" height="14" rx="4" fill="#0a0d13" stroke="#232a3a" strokeWidth="1.5" />
+          <line x1="301" y1="83" x2="305" y2="83" stroke="#232a3a" strokeWidth="2" />
+          <line x1="323" y1="82" x2="336" y2="79" stroke="#232a3a" strokeWidth="2" />
+          <line x1="309" y1="79.5" x2="316" y2="88.5" stroke="#2fd0ff" strokeWidth="1.5" opacity="0.3" />
+          <line x1="292" y1="79.5" x2="297" y2="86.5" stroke="#2fd0ff" strokeWidth="1.2" opacity="0.25" />
+
+          {/* ヘッドホン: バンドはキャップの上、カップは耳に重ねる */}
+          <path d="M282 80 A32 32 0 0 1 346 80" fill="none" stroke="#222c42" strokeWidth="8" strokeLinecap="round" />
+          <path d="M282 80 A32 32 0 0 1 346 80" fill="none" stroke="#46536e" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="282" y1="80" x2="284" y2="86" stroke="#39465f" strokeWidth="3" />
+          <line x1="346" y1="80" x2="343" y2="86" stroke="#39465f" strokeWidth="3" />
+          {/* 手前側(右)のイヤーカップ: 顔の側面(耳)に重ねる */}
+          <ellipse cx="341" cy="92" rx="9" ry="14" fill="#141b2c" stroke="#39465f" strokeWidth="2" />
+          <ellipse cx="341" cy="92" rx="5.5" ry="10.5" fill="#0a0e18" />
+          <circle cx="341" cy="103" r="1.5" fill="#2fd0ff" filter="url(#glow)" />
+          <path d="M285 104 Q272 132 264 152" fill="none" stroke="#0c1120" strokeWidth="2" />
         </g>
 
         {/* デスク */}
