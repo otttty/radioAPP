@@ -41,8 +41,10 @@ const INCLUDED_TYPES = [
   // 公園・自然
   'park', 'national_park', 'garden',
   // 文化・名所・建物
+  // ※ place_of_worship は searchNearby の includedTypes では未対応(400になる)。
+  //   礼拝所は church / hindu_temple / mosque / synagogue でカバーする。
   'museum', 'art_gallery', 'tourist_attraction', 'historical_landmark', 'monument',
-  'place_of_worship', 'church', 'hindu_temple', 'mosque', 'synagogue',
+  'church', 'hindu_temple', 'mosque', 'synagogue',
   'library', 'zoo', 'aquarium', 'amusement_park', 'stadium',
   // 商業施設・その他の建物
   'shopping_mall', 'book_store', 'department_store',
