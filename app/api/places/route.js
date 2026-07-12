@@ -11,6 +11,8 @@
 
 export const runtime = 'nodejs';
 
+import { cleanApiKey } from '../../../lib/apiKey.js';
+
 const ENDPOINT = 'https://places.googleapis.com/v1/places:searchNearby';
 // reviews / editorialSummary は上位SKU(課金が高め)だが、
 // 台本で「利用者の声・お店の雰囲気」を語らせるために取得する。
@@ -112,8 +114,9 @@ export async function POST(request) {
   }
 
   const { apiKey, lat, lon, radius } = body ?? {};
-  // クライアントがキーを送ってくればそれを、無ければサーバーの既定キーを使う
-  const key = (typeof apiKey === 'string' && apiKey.trim()) || process.env.GOOGLE_PLACES_API_KEY;
+  // クライアントがキーを送ってくればそれを、無ければサーバーの既定キーを使う。
+  // 不可視文字(改行・U+2028等)が混じるとヘッダに載せられずfetchが例外を投げるため洗う。
+  const key = cleanApiKey(apiKey) || cleanApiKey(process.env.GOOGLE_PLACES_API_KEY);
   if (!key) {
     return Response.json({ error: 'apiKey is required' }, { status: 400 });
   }

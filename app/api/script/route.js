@@ -11,6 +11,8 @@
 
 export const runtime = 'nodejs';
 
+import { cleanApiKey } from '../../../lib/apiKey.js';
+
 export async function POST(request) {
   let body;
   try {
@@ -21,7 +23,7 @@ export async function POST(request) {
 
   const { apiKey, model, messages, temperature } = body ?? {};
   // クライアントがキーを送ってくればそれを、無ければサーバーの既定キーを使う
-  const key = (typeof apiKey === 'string' && apiKey.trim()) || process.env.OPENAI_API_KEY;
+  const key = cleanApiKey(apiKey) || cleanApiKey(process.env.OPENAI_API_KEY);
   if (!key) {
     return Response.json({ error: 'apiKey is required' }, { status: 400 });
   }

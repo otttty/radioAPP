@@ -11,6 +11,8 @@
 
 export const runtime = 'nodejs';
 
+import { cleanApiKey } from '../../../lib/apiKey.js';
+
 // 日本語の読み精度は turbo/flash より multilingual_v2 の方が高い。
 // 連続再生のレイテンシはプリフェッチで吸収できるため、精度優先で multilingual_v2 を既定にする。
 const DEFAULT_MODEL = 'eleven_multilingual_v2';
@@ -25,7 +27,7 @@ export async function POST(request) {
 
   const { apiKey, voiceId, modelId, text, voiceSettings } = body ?? {};
   // クライアントがキーを送ってくればそれを、無ければサーバーの既定キーを使う
-  const key = (typeof apiKey === 'string' && apiKey.trim()) || process.env.ELEVENLABS_API_KEY;
+  const key = cleanApiKey(apiKey) || cleanApiKey(process.env.ELEVENLABS_API_KEY);
   if (!key) {
     return new Response('apiKey is required', { status: 400 });
   }
