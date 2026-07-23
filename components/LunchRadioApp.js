@@ -31,6 +31,7 @@ const TOPIC_LABEL = {
   shop: '🛍️ お店',
   spot: '📍 スポット',
   filler: '🎙️ フリートーク',
+  mail: '📮 あなたのお便り',
 };
 
 const PERM_LABEL = {
@@ -60,6 +61,10 @@ export default function LunchRadioApp() {
   const [volume, setVolume] = useState(0.9);
   const [locLabel, setLocLabel] = useState('現在地: -');
   const [currentPlace, setCurrentPlace] = useState(null); // いま流れているお便りのスポット(地図表示用)
+  const [mailBody, setMailBody] = useState(''); // 投稿フォームの本文
+  const [mailName, setMailName] = useState(''); // 投稿フォームのラジオネーム(任意)
+  const [pendingMailCount, setPendingMailCount] = useState(0); // 未読み上げの投稿数
+  const [mailNotice, setMailNotice] = useState(''); // 投稿後の案内メッセージ
   const [serverDefaults, setServerDefaults] = useState({ elevenlabs: false, openai: false, google: false });
 
   const manualInputRef = useRef(null);
@@ -76,6 +81,7 @@ export default function LunchRadioApp() {
   const locationReadyRef = useRef(false); // 位置情報が確定したか(未確定の間はフリートークでつなぐ)
   const areaNameRef = useRef(null); // 逆ジオコーディング等で得た地名(番組冒頭で言及)
   const serverDefaultsRef = useRef({ elevenlabs: false, openai: false, google: false });
+  const userMailsRef = useRef([]); // ユーザーが投稿した未読み上げのお便り(先入れ先出し)
 
   useEffect(() => {
     if (transcriptRef.current) {
@@ -103,12 +109,23 @@ export default function LunchRadioApp() {
   // トピックの素材(Google Placesのスポット)を返すFactBundle。
   // lite:true、または位置情報が未確定(取得中)の場合はネットワーク呼び出しをせず
   // warmup を返す(台本側はその間ボブのフリートークでつなぐ)。
+  // 投稿されたお便りを1通取り出す(取り出したらキューから消える)。
+  // 台本生成側がこれを呼び、あればそのお便りの回として台本を作る。
+  function takeUserMail() {
+    const mail = userMailsRef.current.shift() ?? null;
+    if (mail) setPendingMailCount(userMailsRef.current.length);
+    return mail;
+  }
+
+  // トピックの素材(Google Placesのスポット)を返すFactBundle。
+  // lite:true、または位置情報が未確定(取得中)の場合はネットワーク呼び出しをせず
+  // warmup を返す(台本側はその間ボブのフリートークでつなぐ)。
   async function buildFacts({ lite = false } = {}) {
     const baseFix = currentFixRef.current ?? FALLBACK_FIX;
     // 地名は逆ジオコーディング等で別途解決したものを location に添える(冒頭の土地紹介用)
     const fix = { ...baseFix, areaName: areaNameRef.current };
     if (lite || !locationReadyRef.current) {
-      return { places: [], location: fix, warmup: !locationReadyRef.current };
+      return { places: [], location: fix, warmup: !locationReadyRef.current, takeUserMail };
     }
     // スポットと天気(気温)を並行取得。天気は季節感・気温に合った話題づくりに使う
     // (取れなくても番組は続行する)。
@@ -116,7 +133,27 @@ export default function LunchRadioApp() {
       fetchPlaces(fix.lat, fix.lon),
       getCurrentWeather(fix.lat, fix.lon).catch(() => null),
     ]);
-    return { places, location: fix, weather };
+    return { places, location: fix, weather, takeUserMail };
+  }
+
+  // 投稿フォームの送信。キューに積み、次のトピックでボブが読み上げる。
+  function handleMailSubmit(e) {
+    e.preventDefault();
+    const body = mailBody.trim();
+    if (!body) return;
+    userMailsRef.current.push({
+      body: body.slice(0, 600), // 長すぎる投稿は読み上げが冗長になるため制限
+      radioName: mailName.trim().slice(0, 30) || null,
+      submittedAt: Date.now(),
+    });
+    setPendingMailCount(userMailsRef.current.length);
+    setMailBody('');
+    setMailNotice('お便りを送りました。いまの話題が終わったらボブが読み上げます。');
+    setTimeout(() => setMailNotice(''), 8000);
+    // 先読み済みのトピックより先に読ませるため、割り込みで先頭に差し込む
+    audioPipelineRef.current?.insertPrioritySegment().catch((e) => {
+      console.warn('[mail] 割り込み生成に失敗:', e);
+    });
   }
 
   // トピックはGoogle Placesのスポット(レビュー付き)のみ。取得失敗/空なら空配列。
@@ -387,6 +424,36 @@ export default function LunchRadioApp() {
             </div>
           ))}
         </div>
+
+        <form className="mail-form" onSubmit={handleMailSubmit}>
+          <label htmlFor="mailBody">📮 番組にお便りを送る</label>
+          <textarea
+            id="mailBody"
+            value={mailBody}
+            onChange={(e) => setMailBody(e.target.value)}
+            placeholder="今いる場所のこと、聞きたいこと、なんでもどうぞ(ボブが読んで答えます)"
+            rows={3}
+            maxLength={600}
+          />
+          <div className="mail-form-row">
+            <input
+              type="text"
+              value={mailName}
+              onChange={(e) => setMailName(e.target.value)}
+              placeholder="ラジオネーム(任意)"
+              maxLength={30}
+            />
+            <button type="submit" className="secondary" disabled={!mailBody.trim()}>
+              送信
+            </button>
+          </div>
+          {(mailNotice || pendingMailCount > 0) && (
+            <div className="hint">
+              {mailNotice}
+              {pendingMailCount > 0 && `(読み上げ待ち: ${pendingMailCount}通)`}
+            </div>
+          )}
+        </form>
       </div>
 
       <footer className="note">

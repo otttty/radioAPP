@@ -484,6 +484,59 @@ button {
 .line.main { color: var(--accent-dark); }
 .line.sub { color: var(--mint); }
 
+/* ---- お便り投稿フォーム ---- */
+.mail-form {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+.mail-form label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--sub);
+}
+.mail-form textarea {
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--field);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: vertical;
+}
+.mail-form textarea::placeholder { color: #667080; }
+.mail-form textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.mail-form-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.mail-form-row input {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--field);
+  color: var(--text);
+  font-size: 13px;
+}
+.mail-form-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.mail-form-row button { flex: none; }
+.mail-form-row button:disabled { opacity: 0.45; cursor: default; }
+.mail-form .hint { margin-top: 7px; }
+
 #locLabel {
   font-size: 12px;
   color: var(--sub);
