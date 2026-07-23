@@ -515,13 +515,19 @@ button {
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 .mail-form-row {
+  /* 入力欄とボタンの高さを1か所で決める。ボタンは文字行が高く出るぶん
+     素のままだと入力欄より背が高くなり、flexのstretchで入力欄が
+     引き伸ばされてしまうため、両方に同じ高さを明示する。 */
+  --field-h: 34px;
   display: flex;
+  align-items: center;
   gap: 8px;
   margin-bottom: 8px;
 }
 .mail-form-row input {
   flex: 1;
-  padding: 8px 10px;
+  height: var(--field-h);
+  padding: 0 10px;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--field);
@@ -539,11 +545,12 @@ button {
   min-width: 84px;
   background: var(--accent);
   color: #0b1017;
-  /* 隣の入力欄と見た目をそろえる(高さはflexのstretchで一致、角丸も合わせる) */
   border: 1px solid var(--accent);
   border-radius: 10px;
-  padding: 8px 14px;
+  height: var(--field-h);
+  padding: 0 16px;
   font-size: 13px;
+  line-height: 1;
   font-weight: 700;
   transition: background 0.15s;
 }
