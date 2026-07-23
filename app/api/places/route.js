@@ -37,19 +37,23 @@ function pickReviews(reviews) {
 }
 
 // 飲食店に限らず、公園・建物・名所などレビューが付くスポットを幅広く対象にする。
-const INCLUDED_TYPES = [
+// searchNearby は1リクエスト最大20件しか返さず、全タイプ混在だと「人気上位の
+// 同じ20件」に固定されがち。そこでタイプを3グループに分けて並列に問い合わせ、
+// 統合して最大60件のプールを作る(=聴くたびに新しいスポットに出会える)。
+// ※ place_of_worship は searchNearby の includedTypes では未対応(400になる)。
+//   礼拝所は church / hindu_temple / mosque / synagogue でカバーする。
+const TYPE_GROUPS = [
   // 食
-  'restaurant', 'cafe', 'bakery', 'bar', 'meal_takeaway',
-  // 公園・自然
-  'park', 'national_park', 'garden',
-  // 文化・名所・建物
-  // ※ place_of_worship は searchNearby の includedTypes では未対応(400になる)。
-  //   礼拝所は church / hindu_temple / mosque / synagogue でカバーする。
-  'museum', 'art_gallery', 'tourist_attraction', 'historical_landmark', 'monument',
-  'church', 'hindu_temple', 'mosque', 'synagogue',
-  'library', 'zoo', 'aquarium', 'amusement_park', 'stadium',
+  ['restaurant', 'cafe', 'bakery', 'bar', 'meal_takeaway'],
+  // 公園・自然・文化・名所
+  [
+    'park', 'national_park', 'garden',
+    'museum', 'art_gallery', 'tourist_attraction', 'historical_landmark', 'monument',
+    'church', 'hindu_temple', 'mosque', 'synagogue',
+    'library', 'zoo', 'aquarium', 'amusement_park', 'stadium',
+  ],
   // 商業施設・その他の建物
-  'shopping_mall', 'book_store', 'department_store',
+  ['shopping_mall', 'book_store', 'department_store'],
 ];
 
 // Google Placesのタイプ → このアプリの表示カテゴリ
@@ -124,8 +128,7 @@ export async function POST(request) {
     return Response.json({ error: 'lat/lon are required' }, { status: 400 });
   }
 
-  const requestBody = JSON.stringify({
-    includedTypes: INCLUDED_TYPES,
+  const baseBody = {
     maxResultCount: 20,
     rankPreference: 'POPULARITY',
     languageCode: 'ja',
@@ -135,37 +138,44 @@ export async function POST(request) {
         radius: Math.min(Math.max(Number(radius) || 800, 100), 2000),
       },
     },
-  });
+  };
 
-  let upstream;
-  try {
-    upstream = await fetchGooglePlaces(key, requestBody);
-  } catch (e) {
-    // 外向きfetchが例外(タイムアウト/DNS/TLS等)。真因が分かるよう実際の
-    // エラーメッセージを返す(握りつぶさない)。サーバーログにも残す。
-    const reason = e?.name === 'AbortError' ? 'timeout (>9s)' : String(e?.message || e);
-    console.error('[api/places] upstream fetch failed:', reason);
+  // タイプグループごとに並列で問い合わせ、成功した分を統合する。
+  // (1グループの失敗では全体を落とさない。全滅した時だけエラーを返す)
+  const settled = await Promise.allSettled(
+    TYPE_GROUPS.map(async (types) => {
+      const res = await fetchGooglePlaces(key, JSON.stringify({ ...baseBody, includedTypes: types }));
+      if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        throw new Error(detail?.slice(0, 300) || `Google Places ${res.status}`);
+      }
+      const data = await res.json().catch(() => ({}));
+      return data.places || [];
+    })
+  );
+
+  const okResults = settled.filter((s) => s.status === 'fulfilled').map((s) => s.value);
+  if (okResults.length === 0) {
+    const first = settled.find((s) => s.status === 'rejected');
+    const reason =
+      first?.reason?.name === 'AbortError' ? 'timeout (>9s)' : String(first?.reason?.message || first?.reason);
+    console.error('[api/places] all upstream requests failed:', reason);
     return Response.json({ error: `failed to reach Google Places: ${reason}` }, { status: 502 });
   }
 
-  if (!upstream.ok) {
-    const detail = await upstream.text().catch(() => '');
-    return Response.json(
-      { error: detail?.slice(0, 300) || 'Google Places request failed' },
-      { status: upstream.status || 502 }
-    );
+  // 統合して名前で重複排除(グループ間で同じ店が重なることがある)
+  const merged = [];
+  const seen = new Set();
+  for (const list of okResults) {
+    for (const p of list) {
+      const nm = p.displayName?.text || '';
+      if (!nm || seen.has(nm)) continue;
+      seen.add(nm);
+      merged.push(p);
+    }
   }
 
-  if (!upstream.ok) {
-    const detail = await upstream.text().catch(() => '');
-    return Response.json(
-      { error: detail?.slice(0, 300) || 'Google Places request failed' },
-      { status: upstream.status || 502 }
-    );
-  }
-
-  const data = await upstream.json().catch(() => ({}));
-  const places = (data.places || [])
+  const places = merged
     .map((p) => ({
       name: p.displayName?.text || '',
       category: categorize(p.types),
