@@ -93,8 +93,8 @@ h1 {
   border: 1px solid var(--border-soft);
   border-radius: 16px;
   overflow: hidden;
-  margin: 0 auto 16px;
-  max-width: 320px;
+  /* 下のカード(.card)と横幅をそろえる */
+  margin: 0 0 14px;
   background: #101014;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.03) inset,
@@ -517,7 +517,7 @@ button {
 .mail-form-row {
   display: flex;
   gap: 8px;
-  margin-top: 8px;
+  margin-bottom: 8px;
 }
 .mail-form-row input {
   flex: 1;
@@ -533,8 +533,22 @@ button {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
-.mail-form-row button { flex: none; }
-.mail-form-row button:disabled { opacity: 0.45; cursor: default; }
+/* 送信は主要アクションなので、アクセント色でベタ塗りしてはっきり見せる */
+.mail-send {
+  flex: none;
+  min-width: 84px;
+  background: var(--accent);
+  color: #0b1017;
+  border: none;
+  font-weight: 700;
+  transition: background 0.15s;
+}
+.mail-send:hover:not(:disabled) { background: #63b1ff; }
+.mail-send:disabled {
+  background: #232b36;
+  color: #6b7686;
+  cursor: default;
+}
 .mail-form .hint { margin-top: 7px; }
 .mail-share-note { font-size: 11px; opacity: 0.85; }
 .mail-report {

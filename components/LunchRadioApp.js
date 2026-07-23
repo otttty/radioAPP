@@ -511,14 +511,6 @@ export default function LunchRadioApp() {
 
         <form className="mail-form" onSubmit={handleMailSubmit}>
           <label htmlFor="mailBody">📮 番組にお便りを送る</label>
-          <textarea
-            id="mailBody"
-            value={mailBody}
-            onChange={(e) => setMailBody(e.target.value)}
-            placeholder="今いる場所のこと、聞きたいこと、なんでもどうぞ(ボブが読んで答えます)"
-            rows={3}
-            maxLength={600}
-          />
           <div className="mail-form-row">
             <input
               type="text"
@@ -527,10 +519,18 @@ export default function LunchRadioApp() {
               placeholder="ラジオネーム(任意)"
               maxLength={30}
             />
-            <button type="submit" className="secondary" disabled={!mailBody.trim() || mailSending}>
+            <button type="submit" className="mail-send" disabled={!mailBody.trim() || mailSending}>
               {mailSending ? '送信中…' : '送信'}
             </button>
           </div>
+          <textarea
+            id="mailBody"
+            value={mailBody}
+            onChange={(e) => setMailBody(e.target.value)}
+            placeholder="今いる場所のこと、聞きたいこと、なんでもどうぞ(ボブが読んで答えます)"
+            rows={3}
+            maxLength={600}
+          />
           {(mailNotice || pendingMailCount > 0) && (
             <div className="hint">
               {mailNotice}
