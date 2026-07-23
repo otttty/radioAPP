@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { LocationManager } from '@/lib/locationManager';
 import { getRatedPlaces } from '@/lib/googlePlacesProvider';
 import { geocodePlaceName } from '@/lib/geocodeFallback';
+import { getCurrentWeather } from '@/lib/weatherProvider';
 import { reverseGeocodeArea } from '@/lib/reverseGeocode';
 import { ScriptGenerator } from '@/lib/scriptGenerator';
 import { BrowserTTSEngine } from '@/lib/ttsEngine';
@@ -109,8 +110,13 @@ export default function LunchRadioApp() {
     if (lite || !locationReadyRef.current) {
       return { places: [], location: fix, warmup: !locationReadyRef.current };
     }
-    const places = await fetchPlaces(fix.lat, fix.lon);
-    return { places, location: fix };
+    // スポットと天気(気温)を並行取得。天気は季節感・気温に合った話題づくりに使う
+    // (取れなくても番組は続行する)。
+    const [places, weather] = await Promise.all([
+      fetchPlaces(fix.lat, fix.lon),
+      getCurrentWeather(fix.lat, fix.lon).catch(() => null),
+    ]);
+    return { places, location: fix, weather };
   }
 
   // トピックはGoogle Placesのスポット(レビュー付き)のみ。取得失敗/空なら空配列。

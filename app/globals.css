@@ -1,17 +1,18 @@
 :root {
-  --bg: #070b14;
-  --bg-2: #0b1120;
-  --accent: #2fd0ff;
+  --bg: #140f0a;
+  --bg-2: #1d150d;
+  --accent: #33d1ff;
   --accent-dark: #8ae6ff;
   --accent-deep: #1d8fe8;
-  --accent-glow: rgba(47, 208, 255, 0.3);
-  --text: #e9f2f7;
-  --sub: #8494ac;
-  --card: #0d1322;
-  --card-2: #121a2c;
-  --border: rgba(47, 208, 255, 0.16);
-  --border-soft: rgba(255, 255, 255, 0.06);
-  --onair: #ff4d5e;
+  --accent-glow: rgba(51, 209, 255, 0.26);
+  --text: #efe6da;
+  --sub: #a89377;
+  --card: #1d150e;
+  --card-2: #261b12;
+  --border: rgba(51, 209, 255, 0.14);
+  --border-soft: rgba(255, 240, 220, 0.07);
+  --onair: #ff5a4d;
+  --field: #150f09;
 }
 
 * { box-sizing: border-box; }
@@ -24,7 +25,8 @@ html, body {
 body {
   font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
   background:
-    radial-gradient(1200px 600px at 50% -10%, rgba(47, 208, 255, 0.07), transparent 60%),
+    radial-gradient(1200px 600px at 50% -10%, rgba(51, 209, 255, 0.05), transparent 60%),
+    radial-gradient(900px 500px at 80% 120%, rgba(120, 72, 34, 0.16), transparent 60%),
     linear-gradient(180deg, var(--bg-2), var(--bg));
   background-attachment: fixed;
   color: var(--text);
@@ -59,8 +61,9 @@ h1 {
   border: 1px solid var(--border-soft);
   border-radius: 16px;
   overflow: hidden;
-  margin-bottom: 14px;
-  background: #0a0f1c;
+  margin: 0 auto 16px;
+  max-width: 320px;
+  background: #140f0a;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.03) inset,
     0 10px 30px rgba(0, 0, 0, 0.55);
@@ -86,8 +89,8 @@ h1 {
   text-align: center;
   padding: 16px;
   background:
-    radial-gradient(600px 300px at 50% 30%, rgba(47, 208, 255, 0.08), transparent 70%),
-    linear-gradient(180deg, #121a2c, #0a0f1c);
+    radial-gradient(600px 300px at 50% 30%, rgba(51, 209, 255, 0.07), transparent 70%),
+    linear-gradient(180deg, #261b12, #140f0a);
 }
 .booth-placeholder-mark { font-size: 34px; }
 .booth-placeholder-title {
@@ -175,7 +178,7 @@ h1 {
 .perm-purpose {
   font-size: 12px;
   color: var(--sub);
-  background: rgba(47, 208, 255, 0.05);
+  background: rgba(51, 209, 255, 0.05);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 8px 10px;
@@ -205,7 +208,7 @@ h1 {
   padding: 8px 10px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: #090e1a;
+  background: var(--field);
   color: var(--text);
 }
 
@@ -226,13 +229,13 @@ h1 {
   padding: 8px 10px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: #090e1a;
+  background: var(--field);
   color: var(--text);
   margin-bottom: 6px;
   font-size: 13px;
 }
 
-input::placeholder { color: #5c6a84; }
+input::placeholder { color: #7a6a55; }
 
 .tts-select select:focus,
 .tts-select input:focus,
@@ -270,11 +273,11 @@ button {
 .primary:disabled { opacity: 0.55; box-shadow: none; }
 
 .secondary {
-  background: rgba(47, 208, 255, 0.08);
+  background: rgba(51, 209, 255, 0.08);
   color: var(--accent-dark);
   border: 1px solid var(--border);
 }
-.secondary:hover { background: rgba(47, 208, 255, 0.15); }
+.secondary:hover { background: rgba(51, 209, 255, 0.14); }
 
 #locStatus { font-size: 12px; color: var(--sub); margin-top: 6px; }
 
@@ -347,7 +350,7 @@ button {
   display: inline-block;
   font-size: 11px;
   color: var(--accent-dark);
-  background: rgba(47, 208, 255, 0.08);
+  background: rgba(51, 209, 255, 0.08);
   border: 1px solid var(--border);
   padding: 3px 10px;
   border-radius: 999px;
