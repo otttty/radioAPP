@@ -65,6 +65,10 @@ export default function LunchRadioApp() {
   const [mailName, setMailName] = useState(''); // 投稿フォームのラジオネーム(任意)
   const [pendingMailCount, setPendingMailCount] = useState(0); // 未読み上げの投稿数
   const [mailNotice, setMailNotice] = useState(''); // 投稿後の案内メッセージ
+  const [mailSending, setMailSending] = useState(false); // 投稿の送信中フラグ
+  const [mailPersistent, setMailPersistent] = useState(true); // 共有ストアが有効か
+  const [currentMailId, setCurrentMailId] = useState(null); // いま読まれている他リスナーの投稿(通報用)
+  const [reportDone, setReportDone] = useState(false);
   const [serverDefaults, setServerDefaults] = useState({ elevenlabs: false, openai: false, google: false });
 
   const manualInputRef = useRef(null);
@@ -81,7 +85,9 @@ export default function LunchRadioApp() {
   const locationReadyRef = useRef(false); // 位置情報が確定したか(未確定の間はフリートークでつなぐ)
   const areaNameRef = useRef(null); // 逆ジオコーディング等で得た地名(番組冒頭で言及)
   const serverDefaultsRef = useRef({ elevenlabs: false, openai: false, google: false });
-  const userMailsRef = useRef([]); // ユーザーが投稿した未読み上げのお便り(先入れ先出し)
+  const userMailsRef = useRef([]); // 自分が投稿した未読み上げのお便り(先入れ先出し)
+  const communityMailsRef = useRef([]); // この街に届いている他のリスナーのお便り
+  const readMailIdsRef = useRef(new Set()); // 読み上げ済み/自分の投稿(重複を避ける)
 
   useEffect(() => {
     if (transcriptRef.current) {
@@ -109,12 +115,40 @@ export default function LunchRadioApp() {
   // トピックの素材(Google Placesのスポット)を返すFactBundle。
   // lite:true、または位置情報が未確定(取得中)の場合はネットワーク呼び出しをせず
   // warmup を返す(台本側はその間ボブのフリートークでつなぐ)。
-  // 投稿されたお便りを1通取り出す(取り出したらキューから消える)。
+  // 自分が投稿したお便りを1通取り出す(取り出したらキューから消える)。
   // 台本生成側がこれを呼び、あればそのお便りの回として台本を作る。
   function takeUserMail() {
     const mail = userMailsRef.current.shift() ?? null;
     if (mail) setPendingMailCount(userMailsRef.current.length);
     return mail;
+  }
+
+  // この街に届いている「他のリスナーのお便り」を1通取り出す。
+  // 自分の投稿・読み上げ済みは飛ばす。
+  function takeCommunityMail() {
+    while (communityMailsRef.current.length > 0) {
+      const mail = communityMailsRef.current.shift();
+      if (!mail?.id || readMailIdsRef.current.has(mail.id)) continue;
+      readMailIdsRef.current.add(mail.id);
+      setCurrentMailId(mail.id);
+      return mail;
+    }
+    return null;
+  }
+
+  // 周辺に届いているお便りを取得して補充する(失敗しても番組は続行)。
+  async function refreshCommunityMails(lat, lon) {
+    try {
+      const res = await fetch(`/api/mails?lat=${lat}&lon=${lon}`);
+      const data = await res.json();
+      const fresh = (data.mails || []).filter((m) => !readMailIdsRef.current.has(m.id));
+      // 既にキューにあるものと重複させない
+      const queued = new Set(communityMailsRef.current.map((m) => m.id));
+      for (const m of fresh) if (!queued.has(m.id)) communityMailsRef.current.push(m);
+      setMailPersistent(!!data.persistent);
+    } catch (e) {
+      console.warn('[mails] 取得に失敗:', e);
+    }
   }
 
   // トピックの素材(Google Placesのスポット)を返すFactBundle。
@@ -125,7 +159,7 @@ export default function LunchRadioApp() {
     // 地名は逆ジオコーディング等で別途解決したものを location に添える(冒頭の土地紹介用)
     const fix = { ...baseFix, areaName: areaNameRef.current };
     if (lite || !locationReadyRef.current) {
-      return { places: [], location: fix, warmup: !locationReadyRef.current, takeUserMail };
+      return { places: [], location: fix, warmup: !locationReadyRef.current, takeUserMail, takeCommunityMail };
     }
     // スポットと天気(気温)を並行取得。天気は季節感・気温に合った話題づくりに使う
     // (取れなくても番組は続行する)。
@@ -133,27 +167,74 @@ export default function LunchRadioApp() {
       fetchPlaces(fix.lat, fix.lon),
       getCurrentWeather(fix.lat, fix.lon).catch(() => null),
     ]);
-    return { places, location: fix, weather, takeUserMail };
+    // この街に届いているお便りが尽きたら、裏で補充しておく(待たない)
+    if (communityMailsRef.current.length === 0) refreshCommunityMails(fix.lat, fix.lon);
+    return { places, location: fix, weather, takeUserMail, takeCommunityMail };
   }
 
-  // 投稿フォームの送信。キューに積み、次のトピックでボブが読み上げる。
-  function handleMailSubmit(e) {
+  // 投稿フォームの送信。
+  // 1) サーバーに保存(モデレーション通過後。同じ場所に来た他のリスナーにも届く)
+  // 2) 自分の番組では即座に割り込みで読み上げる
+  async function handleMailSubmit(e) {
     e.preventDefault();
     const body = mailBody.trim();
-    if (!body) return;
+    if (!body || mailSending) return;
+    setMailSending(true);
+    setMailNotice('');
+
+    const fix = currentFixRef.current ?? FALLBACK_FIX;
+    const radioName = mailName.trim().slice(0, 30) || null;
+    let savedId = null;
+    try {
+      const res = await fetch('/api/mails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body, radioName, lat: fix.lat, lon: fix.lon, areaName: areaNameRef.current }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        // モデレーションやレート制限で弾かれた場合は理由を出して中断する
+        setMailNotice(data.error || '送信できませんでした。');
+        setMailSending(false);
+        return;
+      }
+      savedId = data.id ?? null;
+      setMailPersistent(!!data.persistent);
+      if (savedId) readMailIdsRef.current.add(savedId); // 自分の投稿を二重に読まない
+    } catch (err) {
+      console.warn('[mail] 保存に失敗、この端末だけで読み上げます:', err);
+    }
+
     userMailsRef.current.push({
+      id: savedId,
       body: body.slice(0, 600), // 長すぎる投稿は読み上げが冗長になるため制限
-      radioName: mailName.trim().slice(0, 30) || null,
+      radioName,
       submittedAt: Date.now(),
     });
     setPendingMailCount(userMailsRef.current.length);
     setMailBody('');
     setMailNotice('お便りを送りました。いまの話題が終わったらボブが読み上げます。');
     setTimeout(() => setMailNotice(''), 8000);
+    setMailSending(false);
     // 先読み済みのトピックより先に読ませるため、割り込みで先頭に差し込む
-    audioPipelineRef.current?.insertPrioritySegment().catch((e) => {
-      console.warn('[mail] 割り込み生成に失敗:', e);
+    audioPipelineRef.current?.insertPrioritySegment().catch((err) => {
+      console.warn('[mail] 割り込み生成に失敗:', err);
     });
+  }
+
+  // いま読まれている他リスナーのお便りを通報する
+  async function handleReport() {
+    if (!currentMailId || reportDone) return;
+    try {
+      await fetch('/api/mails/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: currentMailId }),
+      });
+      setReportDone(true);
+    } catch (err) {
+      console.warn('[mail] 通報に失敗:', err);
+    }
   }
 
   // トピックはGoogle Placesのスポット(レビュー付き)のみ。取得失敗/空なら空配列。
@@ -196,6 +277,9 @@ export default function LunchRadioApp() {
         setTranscript([]);
         // お便りのスポットなら地図を出す(座標が無い/つなぎ回は消す)
         setCurrentPlace(segment.place && typeof segment.place.lat === 'number' ? segment.place : null);
+        // 他リスナーの投稿以外の回になったら通報ボタンを引っ込める
+        if (segment.topic !== 'mail') setCurrentMailId(null);
+        setReportDone(false);
       },
       onLine: (line) => {
         setTranscript((prev) => [...prev, { speaker: line.speaker, text: line.text }]);
@@ -443,8 +527,8 @@ export default function LunchRadioApp() {
               placeholder="ラジオネーム(任意)"
               maxLength={30}
             />
-            <button type="submit" className="secondary" disabled={!mailBody.trim()}>
-              送信
+            <button type="submit" className="secondary" disabled={!mailBody.trim() || mailSending}>
+              {mailSending ? '送信中…' : '送信'}
             </button>
           </div>
           {(mailNotice || pendingMailCount > 0) && (
@@ -452,6 +536,16 @@ export default function LunchRadioApp() {
               {mailNotice}
               {pendingMailCount > 0 && `(読み上げ待ち: ${pendingMailCount}通)`}
             </div>
+          )}
+          <div className="hint mail-share-note">
+            {mailPersistent
+              ? '送ったお便りはこの場所に残り、あとで同じ場所に来た人の番組でも読まれます。URLや連絡先は投稿できません。'
+              : '⚠ 共有ストア未設定のため、いまは自分の番組でだけ読まれます(他の人には届きません)。'}
+          </div>
+          {currentMailId && (
+            <button type="button" className="secondary mail-report" onClick={handleReport} disabled={reportDone}>
+              {reportDone ? '通報しました' : '⚑ いま読まれているお便りを通報'}
+            </button>
           )}
         </form>
       </div>

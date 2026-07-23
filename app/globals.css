@@ -536,6 +536,14 @@ button {
 .mail-form-row button { flex: none; }
 .mail-form-row button:disabled { opacity: 0.45; cursor: default; }
 .mail-form .hint { margin-top: 7px; }
+.mail-share-note { font-size: 11px; opacity: 0.85; }
+.mail-report {
+  margin-top: 8px;
+  width: 100%;
+  font-size: 12px;
+  padding: 7px 10px;
+}
+.mail-report:disabled { opacity: 0.5; cursor: default; }
 
 #locLabel {
   font-size: 12px;
