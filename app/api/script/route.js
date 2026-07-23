@@ -44,7 +44,10 @@ export async function POST(request) {
         messages,
         temperature: typeof temperature === 'number' ? temperature : 0.9,
         response_format: { type: 'json_object' },
-        max_tokens: 700,
+        // 1トピック8〜10行、各行に text と speech(かな全文)を出させるため、
+        // 日本語だとトークンを多く消費する。700では毎回JSONが途中で切れて
+        // JSON.parseに失敗し、全回テンプレートへフォールバックしていた。
+        max_tokens: 2400,
       }),
     });
   } catch {
@@ -57,6 +60,8 @@ export async function POST(request) {
   }
 
   const data = await upstream.json().catch(() => ({}));
-  const content = data?.choices?.[0]?.message?.content ?? '';
-  return Response.json({ content });
+  const choice = data?.choices?.[0];
+  const content = choice?.message?.content ?? '';
+  // finish_reason を返して、切り詰め(length)を呼び出し側で検知できるようにする
+  return Response.json({ content, finishReason: choice?.finish_reason ?? null });
 }

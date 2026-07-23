@@ -76,7 +76,6 @@ export default function LunchRadioApp() {
   const locationReadyRef = useRef(false); // 位置情報が確定したか(未確定の間はフリートークでつなぐ)
   const areaNameRef = useRef(null); // 逆ジオコーディング等で得た地名(番組冒頭で言及)
   const serverDefaultsRef = useRef({ elevenlabs: false, openai: false, google: false });
-  const lineKeyRef = useRef(0);
 
   useEffect(() => {
     if (transcriptRef.current) {
@@ -162,8 +161,7 @@ export default function LunchRadioApp() {
         setCurrentPlace(segment.place && typeof segment.place.lat === 'number' ? segment.place : null);
       },
       onLine: (line) => {
-        lineKeyRef.current += 1;
-        setTranscript((prev) => [...prev, { key: lineKeyRef.current, speaker: line.speaker, text: line.text }]);
+        setTranscript((prev) => [...prev, { speaker: line.speaker, text: line.text }]);
       },
     });
 
@@ -297,10 +295,16 @@ export default function LunchRadioApp() {
 
   return (
     <div className="app">
-      <h1>📻 まちかどラジオ</h1>
-      <p className="tagline">今いる場所のまわりのお店や名所を、そこを訪れたリスナーのお便りと一緒にDJボブが届け続けます。</p>
+      <header className="brand">
+        <div className="brand-freq">
+          <span className="brand-dial" />
+          99.7 FM
+        </div>
+        <h1>まちかどラジオ</h1>
+        <p className="tagline">今いる場所のまわりのお店や名所を、そこを訪れたリスナーのお便りと一緒にDJボブが届け続けます。</p>
+      </header>
 
-      <BobBooth live={isPlaying} />
+      <BobBooth live={isPlaying} place={currentPlace} />
 
       <div id="panel-setup" className={`card${started ? ' hidden' : ''}`}>
         <div className="perm-row">
@@ -375,34 +379,14 @@ export default function LunchRadioApp() {
         </div>
         <div id="locLabel">{locLabel}</div>
         <div id="transcript" ref={transcriptRef}>
-          {transcript.map((line) => (
-            <div key={line.key} className={`line ${line.speaker}`}>
+          {/* 字幕はトピックごとにリセットされる追記専用リストなので、
+              並び替えは起きずインデックスをkeyにして安全(重複しない) */}
+          {transcript.map((line, i) => (
+            <div key={i} className={`line ${line.speaker}`}>
               {line.speaker === 'main' ? 'ボブ' : '📩 お便り'}: {line.text}
             </div>
           ))}
         </div>
-        {currentPlace && (
-          <div className="mail-map">
-            {/* iframeはタップを吸ってしまうため操作無効にし、上に透明リンクを重ねて
-                どこをタップしてもGoogleマップが開くようにする */}
-            <iframe
-              title={`${currentPlace.name}の地図`}
-              src={`https://maps.google.com/maps?q=${currentPlace.lat},${currentPlace.lon}&z=16&hl=ja&output=embed`}
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
-            <a
-              className="mail-map-link"
-              href={`https://www.google.com/maps/search/?api=1&query=${currentPlace.lat},${currentPlace.lon}`}
-              target="_blank"
-              rel="noreferrer"
-              aria-label={`${currentPlace.name}をGoogleマップで開く`}
-            />
-            <div className="mail-map-caption">
-              📍 {currentPlace.name}(タップで地図を開く)
-            </div>
-          </div>
-        )}
       </div>
 
       <footer className="note">

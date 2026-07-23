@@ -45,17 +45,46 @@ body {
   max-width: 480px;
 }
 
-/* ---- ヘッダー ---- */
+/* ---- ヘッダー: 局のロゴタイプ風(絵文字を使わず、周波数ラベル+罫線で構成) ---- */
+.brand {
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.brand-freq {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.28em;
+  color: var(--sub);
+  margin-bottom: 6px;
+}
+/* チューナーの目盛り(周波数ラベルの前に置く小さな装飾) */
+.brand-dial {
+  width: 22px;
+  height: 8px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--accent) 0 1px,
+    transparent 1px 4px
+  );
+  opacity: 0.8;
+}
+
 h1 {
-  font-size: 22px;
-  margin: 4px 0 2px;
-  letter-spacing: 0.02em;
+  font-size: 24px;
+  margin: 0 0 4px;
+  letter-spacing: 0.06em;
+  font-weight: 700;
 }
 
 .tagline {
   color: var(--sub);
   font-size: 13px;
-  margin-bottom: 18px;
+  margin: 0;
   line-height: 1.6;
 }
 
@@ -81,6 +110,14 @@ h1 {
   height: auto;
 }
 
+/* お便り中の地図(イラストと同じ枠に表示)。ドラッグ・ズームで操作できる */
+.booth-map {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2; /* イラストと同じ縦横比にして高さのガタつきを防ぐ */
+  border: 0;
+}
+
 /* 画像未配置/読み込み失敗時のプレースホルダ */
 .booth-placeholder {
   aspect-ratio: 3 / 2;
@@ -95,7 +132,6 @@ h1 {
     radial-gradient(600px 300px at 50% 30%, rgba(77, 163, 255, 0.06), transparent 70%),
     linear-gradient(180deg, #1b212b, #0f1218);
 }
-.booth-placeholder-mark { font-size: 34px; }
 .booth-placeholder-title {
   font-size: 13px;
   font-weight: 800;
@@ -145,6 +181,8 @@ h1 {
 .booth-caption {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 10px;
   padding: 6px 14px;
   font-size: 10px;
   font-weight: 700;
@@ -153,6 +191,24 @@ h1 {
   border-top: 1px dashed var(--border);
   background: rgba(0, 0, 0, 0.3);
 }
+/* 地図表示中のキャプション: 店名は詰めすぎない・長い名前は省略 */
+.booth-caption-place {
+  letter-spacing: 0.04em;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.booth-map-open {
+  flex: none;
+  letter-spacing: 0.04em;
+  color: var(--accent-dark);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+.booth-map-open:hover { background: rgba(255, 255, 255, 0.06); }
 
 /* ---- カード: 暗いパネル ---- */
 .card {
@@ -427,37 +483,6 @@ button {
 .line { margin-bottom: 6px; }
 .line.main { color: var(--accent-dark); }
 .line.sub { color: var(--mint); }
-
-/* お便りのスポット地図(台本の下)。タップでGoogleマップが開く */
-.mail-map {
-  position: relative;
-  margin-top: 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--field);
-}
-.mail-map iframe {
-  display: block;
-  width: 100%;
-  height: 180px;
-  border: 0;
-  pointer-events: none; /* タップは上の透明リンクで受ける */
-  filter: saturate(0.85) brightness(0.92); /* ダークUIに馴染ませる */
-}
-.mail-map-link {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-}
-.mail-map-caption {
-  position: relative;
-  padding: 7px 12px;
-  font-size: 12px;
-  color: var(--accent-dark);
-  background: rgba(0, 0, 0, 0.35);
-  border-top: 1px solid var(--border-soft);
-}
 
 #locLabel {
   font-size: 12px;
