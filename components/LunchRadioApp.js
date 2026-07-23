@@ -59,6 +59,7 @@ export default function LunchRadioApp() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.9);
   const [locLabel, setLocLabel] = useState('現在地: -');
+  const [currentPlace, setCurrentPlace] = useState(null); // いま流れているお便りのスポット(地図表示用)
   const [serverDefaults, setServerDefaults] = useState({ elevenlabs: false, openai: false, google: false });
 
   const manualInputRef = useRef(null);
@@ -157,6 +158,8 @@ export default function LunchRadioApp() {
         setTopicLabel(TOPIC_LABEL[segment.topic] ?? segment.topic);
         setFactBadge(segment.factGrounded ? '実データに基づく話題' : 'つなぎのフリートーク');
         setTranscript([]);
+        // お便りのスポットなら地図を出す(座標が無い/つなぎ回は消す)
+        setCurrentPlace(segment.place && typeof segment.place.lat === 'number' ? segment.place : null);
       },
       onLine: (line) => {
         lineKeyRef.current += 1;
@@ -378,6 +381,28 @@ export default function LunchRadioApp() {
             </div>
           ))}
         </div>
+        {currentPlace && (
+          <div className="mail-map">
+            {/* iframeはタップを吸ってしまうため操作無効にし、上に透明リンクを重ねて
+                どこをタップしてもGoogleマップが開くようにする */}
+            <iframe
+              title={`${currentPlace.name}の地図`}
+              src={`https://maps.google.com/maps?q=${currentPlace.lat},${currentPlace.lon}&z=16&hl=ja&output=embed`}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+            <a
+              className="mail-map-link"
+              href={`https://www.google.com/maps/search/?api=1&query=${currentPlace.lat},${currentPlace.lon}`}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`${currentPlace.name}をGoogleマップで開く`}
+            />
+            <div className="mail-map-caption">
+              📍 {currentPlace.name}(タップで地図を開く)
+            </div>
+          </div>
+        )}
       </div>
 
       <footer className="note">

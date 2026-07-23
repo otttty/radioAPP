@@ -179,6 +179,9 @@ export async function POST(request) {
     .map((p) => ({
       name: p.displayName?.text || '',
       category: categorize(p.types),
+      // スポットの座標(地図埋め込み・タップでGoogleマップを開くために返す)
+      lat: p.location?.latitude,
+      lon: p.location?.longitude,
       distanceM: p.location
         ? Math.round(distanceMeters(lat, lon, p.location.latitude, p.location.longitude))
         : null,

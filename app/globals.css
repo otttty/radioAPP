@@ -1,22 +1,22 @@
-/* パレット: ダークモード × カルチャー × FMラジオ
-   ニュートラルなチャコール地に、クリームの文字、チューナー針の赤、
-   ヴィンテージ機材のゴールドを効かせる。 */
+/* パレット: ダークモード × カルチャー × FMラジオ(寒色系)
+   青みのチャコール地に、クールなオフホワイトの文字、アズールブルーの
+   アクセント。赤は使わない(ON AIRランプのみ放送局の慣習として残す)。 */
 :root {
-  --bg: #0e0e12;
-  --bg-2: #16161c;
-  --accent: #ff5a52; /* チューナー針の赤(主アクション・ON AIR系) */
-  --accent-dark: #ff958f; /* 赤の明るい変化(テキストアクセント) */
-  --accent-deep: #d43d38;
-  --accent-glow: rgba(255, 90, 82, 0.22);
-  --gold: #e6c98c; /* ヴィンテージ機材のゴールド(バッジ・ラベル) */
-  --text: #f0ebe1; /* クリーム(紙・活版の温かみ) */
-  --sub: #9a948b;
-  --card: #17171d;
-  --card-2: #1f1f26;
+  --bg: #0d1015;
+  --bg-2: #141922;
+  --accent: #4da3ff; /* アズールブルー(主アクション) */
+  --accent-dark: #8ec9ff; /* 明るい青(テキストアクセント) */
+  --accent-deep: #2b7cd9;
+  --accent-glow: rgba(77, 163, 255, 0.22);
+  --mint: #84d9c8; /* アイスミント(お便り字幕などの差し色) */
+  --text: #e9eef4; /* クールなオフホワイト */
+  --sub: #8b95a3;
+  --card: #151a22;
+  --card-2: #1b212b;
   --border: rgba(255, 255, 255, 0.09);
   --border-soft: rgba(255, 255, 255, 0.06);
-  --onair: #ff5a52;
-  --field: #101014;
+  --onair: #ff5a52; /* ON AIRランプのみ(ボタンには使わない) */
+  --field: #0f1218;
 }
 
 * { box-sizing: border-box; }
@@ -29,8 +29,8 @@ html, body {
 body {
   font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
   background:
-    radial-gradient(1200px 600px at 50% -10%, rgba(255, 90, 82, 0.05), transparent 60%),
-    radial-gradient(900px 500px at 85% 115%, rgba(230, 201, 140, 0.05), transparent 60%),
+    radial-gradient(1200px 600px at 50% -10%, rgba(77, 163, 255, 0.05), transparent 60%),
+    radial-gradient(900px 500px at 85% 115%, rgba(132, 217, 200, 0.04), transparent 60%),
     linear-gradient(180deg, var(--bg-2), var(--bg));
   background-attachment: fixed;
   color: var(--text);
@@ -50,7 +50,6 @@ h1 {
   font-size: 22px;
   margin: 4px 0 2px;
   letter-spacing: 0.02em;
-  text-shadow: 0 0 18px var(--accent-glow);
 }
 
 .tagline {
@@ -93,8 +92,8 @@ h1 {
   text-align: center;
   padding: 16px;
   background:
-    radial-gradient(600px 300px at 50% 30%, rgba(255, 90, 82, 0.06), transparent 70%),
-    linear-gradient(180deg, #1f1f26, #101014);
+    radial-gradient(600px 300px at 50% 30%, rgba(77, 163, 255, 0.06), transparent 70%),
+    linear-gradient(180deg, #1b212b, #0f1218);
 }
 .booth-placeholder-mark { font-size: 34px; }
 .booth-placeholder-title {
@@ -239,7 +238,7 @@ h1 {
   font-size: 13px;
 }
 
-input::placeholder { color: #6f6a63; }
+input::placeholder { color: #667080; }
 
 .tts-select select:focus,
 .tts-select input:focus,
@@ -264,24 +263,25 @@ button {
   font-weight: 600;
 }
 
+/* ボタンはフラットデザイン: 単色ベタ塗り・影やグラデーションなし */
 .primary {
-  background: linear-gradient(180deg, var(--accent), var(--accent-deep));
-  color: #fff6f3;
+  background: var(--accent);
+  color: #0b1017;
   width: 100%;
   padding: 14px;
   font-size: 16px;
-  box-shadow: 0 6px 20px var(--accent-glow);
-  transition: filter 0.15s, box-shadow 0.15s;
+  transition: background 0.15s;
 }
-.primary:hover { filter: brightness(1.08); }
-.primary:disabled { opacity: 0.55; box-shadow: none; }
+.primary:hover { background: #63b1ff; }
+.primary:disabled { opacity: 0.55; }
 
 .secondary {
-  background: rgba(255, 255, 255, 0.05);
+  background: #1c2430;
   color: var(--accent-dark);
   border: 1px solid var(--border);
+  transition: background 0.15s;
 }
-.secondary:hover { background: rgba(255, 255, 255, 0.09); }
+.secondary:hover { background: #232d3c; }
 
 #locStatus { font-size: 12px; color: var(--sub); margin-top: 6px; }
 
@@ -347,15 +347,14 @@ button {
   font-size: 20px;
   font-weight: 700;
   margin-bottom: 6px;
-  text-shadow: 0 0 14px var(--accent-glow);
 }
 
 #factBadge {
   display: inline-block;
   font-size: 11px;
-  color: var(--gold);
-  background: rgba(230, 201, 140, 0.07);
-  border: 1px solid rgba(230, 201, 140, 0.28);
+  color: var(--accent-dark);
+  background: rgba(77, 163, 255, 0.08);
+  border: 1px solid rgba(77, 163, 255, 0.28);
   padding: 3px 10px;
   border-radius: 999px;
   margin-bottom: 14px;
@@ -374,7 +373,7 @@ button {
   width: 4px;
   height: 20%;
   border-radius: 2px;
-  background: linear-gradient(180deg, var(--accent), var(--accent-deep));
+  background: var(--accent);
   opacity: 0.35;
 }
 .equalizer.live span {
@@ -426,8 +425,39 @@ button {
 }
 
 .line { margin-bottom: 6px; }
-.line.main { color: var(--gold); }
-.line.sub { color: var(--accent-dark); }
+.line.main { color: var(--accent-dark); }
+.line.sub { color: var(--mint); }
+
+/* お便りのスポット地図(台本の下)。タップでGoogleマップが開く */
+.mail-map {
+  position: relative;
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--field);
+}
+.mail-map iframe {
+  display: block;
+  width: 100%;
+  height: 180px;
+  border: 0;
+  pointer-events: none; /* タップは上の透明リンクで受ける */
+  filter: saturate(0.85) brightness(0.92); /* ダークUIに馴染ませる */
+}
+.mail-map-link {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.mail-map-caption {
+  position: relative;
+  padding: 7px 12px;
+  font-size: 12px;
+  color: var(--accent-dark);
+  background: rgba(0, 0, 0, 0.35);
+  border-top: 1px solid var(--border-soft);
+}
 
 #locLabel {
   font-size: 12px;
