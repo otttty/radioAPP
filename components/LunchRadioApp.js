@@ -31,7 +31,7 @@ const TOPIC_LABEL = {
   shop: '🛍️ お店',
   spot: '📍 スポット',
   filler: '🎙️ フリートーク',
-  mail: '📮 あなたのお便り',
+  mail: '📮 誰かのお便り',
 };
 
 const PERM_LABEL = {
